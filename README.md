@@ -1,2 +1,2 @@
-# inmensus
-Monorepo for inmensus trading
+# Inmensus Trading
+Monorepo for Inmensus Trading.
