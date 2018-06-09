@@ -7,6 +7,7 @@ VC using git. Include source code, exclude generated code and binaries.
 
 ## Branches
 Individual contributions to the `staging` branch must be committed to an individual branch first, and commits merged into `staging` later. Preferably, prior to merging into `staging`, another member will conduct code reviews of said commits. This avoids hasty commits which break `staging` as well as painful merge conflicts.
+* Perhaps this isn't too bad for small changes while we are starting up.
 
 Commits in `staging` can then be merged into `production`, the default branch, once all members have reviewed the code changes. `production` should always contain functional code, and reflect the status of the running server instances.
 
