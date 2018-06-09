@@ -10,9 +10,6 @@ Individual contributions to the master branch must be committed to an individual
 
 ## Directory Organization
 Directories are organized as specified in the master pipeline overview available at (WPI).
-Empty directories can be primed for git's version control using an empty .gitignore.
-
-//not sure if this is the best way to do this
 
 # Documentation
 All documentation will be organized on the Github Wiki.
