@@ -7,15 +7,24 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"strconv"
 	"strings"
 )
 
 //StrategyServer int-equivalent error code return type
 type StrategyServer int
 
+//OnInputEventArgs argument type for OnInputEvent
+type OnInputEventArgs struct {
+	exchangeName string
+	eventType    string
+	currency     string
+	volume       float64
+}
+
 //OnInputEvent called by IOM when input event has arrived
-func (t *StrategyServer) OnInputEvent(args *map[string]string, reply *int) error {
-	(*args)["test"] = "success"
+func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
+	(*args).exchangeName = "what"
 	return nil
 }
 
@@ -60,22 +69,55 @@ func main() {
 	stratServer := new(StrategyServer)
 	rpc.Register(stratServer)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", ":"+config["strategy-port"])
-	if e != nil {
-		log.Fatal("Listen error:", e)
+	listen, err := net.Listen("tcp", ":"+config["strategy-port"])
+	if err != nil {
+		log.Fatal("Listen error:", err)
 	}
-	go http.Serve(l, nil)
+	go http.Serve(listen, nil)
 	fmt.Println("Listening setup.")
 
-	//connect to output modules
-	if config["output-std"] != "yes" {
-		omServers := []
-		if config["use-gdax-iom"] == "yes"
-			omServers.push(59998)
+	//fetch the ioms from the config
+	iomHighPort, err := strconv.Atoi(config["iom-port-high"])
+	if err != nil {
+		log.Fatal("iom-port-high configuration:", err)
+	}
 
-		client, err := rpc.DialHTTP("tcp", "localhost:"+)
-		if err != nil {
-			log.Fatal("Error while connecting to output modules:", err)
+	//breakdown the iom list
+	ioms := config["iom-list"]
+	iomList := make([]int, 0)
+	acc = ""
+	for a := 0; a < len(ioms); a++ {
+		if ioms[a] != ' ' {
+			acc += string(ioms[a])
+		}
+		if ioms[a] == ' ' || a == len(ioms)-1 {
+			num, err := strconv.Atoi(acc)
+			if err != nil {
+				log.Fatal("iom-list configuration:", err)
+			}
+			iomList = append(iomList, num)
+			acc = ""
+		}
+	}
+
+	fmt.Println(iomHighPort)
+	fmt.Println(iomList)
+
+	//connect to any output modules
+	if config["output-std"] != "yes" {
+		//connect to the servers on the list
+		for a := 0; a < len(iomList); a++ {
+			port := strconv.Itoa(iomHighPort - iomList[a]*2)
+
+			//TODO: move client to a higher scope
+			client, err := rpc.DialHTTP("tcp", "localhost:"+port)
+			if err != nil {
+				log.Fatal("dialing:", err)
+			}
+			fmt.Println("Connected to port " + port)
+
+			//test/sample
+			err = client.Call("Arith.Multiply", nil, nil)
 		}
 	}
 
