@@ -1,18 +1,19 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
+	"strings"
 )
 
-//fuck ur comments
+//StrategyServer int-equivalent error code return type
 type StrategyServer int
 
+//OnInputEvent called by IOM when input event has arrived
 func (t *StrategyServer) OnInputEvent(args *map[string]string, reply *int) error {
 	(*args)["test"] = "success"
 	return nil
@@ -27,7 +28,7 @@ func checkError(e error) {
 func main() {
 	//init
 	fmt.Println("Starting...")
-	fmt.Println("Orderbook pressure strategy, taken from http://eprints.maths.ox.ac.uk/1895/1/Darryl%20Shen%20%28for%20archive%29.pdf")
+	fmt.Println("Orderbook pressure strategy, taken from https://goo.gl/HH6P7V.")
 
 	//read config into map
 	dat, err := ioutil.ReadFile("config.ini")
@@ -35,33 +36,48 @@ func main() {
 	configStr := string(dat)
 
 	config := make(map[string]string)
-	configBytes := bytes.NewBuffer([]byte(configStr))
-	configBuffer := make([]byte, 0, configBytes.Len())
-	for {
-		key := ""
-		p := configBytes.Bytes()
-		if bytes.Equal(p[:1], []byte(":")) {
-			key = string(configBuffer)
-			configBuffer = make([]byte, 0, configBytes.Len())
-		} else if bytes.Equal(p[:1], []byte("\n")) {
-			config[key] = string(configBuffer)
-			configBuffer = make([]byte, 0, configBytes.Len())
+	key, acc := "", ""
+	for a := 0; a < len(configStr); a++ {
+		if configStr[a] == ':' {
+			key = strings.TrimSpace(acc)
+			acc = ""
+		} else if configStr[a] == '\n' && key != "" {
+			config[key] = strings.TrimSpace(acc)
+			acc = ""
+			key = ""
+		} else {
+			acc += string(configStr[a])
 		}
-		configBuffer = append(configBuffer, configBytes.Next(1)...)
+	}
+	if key != "" {
+		config[key] = strings.TrimSpace(acc)
 	}
 
+	fmt.Println("Configuration options:")
 	fmt.Println(config)
 
 	//setup listening
 	stratServer := new(StrategyServer)
 	rpc.Register(stratServer)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", int(config["strategy-port"]))
+	l, e := net.Listen("tcp", ":"+config["strategy-port"])
 	if e != nil {
 		log.Fatal("Listen error:", e)
 	}
 	go http.Serve(l, nil)
 	fmt.Println("Listening setup.")
+
+	//connect to output modules
+	if config["output-std"] != "yes" {
+		omServers := []
+		if config["use-gdax-iom"] == "yes"
+			omServers.push(59998)
+
+		client, err := rpc.DialHTTP("tcp", "localhost:"+)
+		if err != nil {
+			log.Fatal("Error while connecting to output modules:", err)
+		}
+	}
 
 	//clean up and conclude
 	fmt.Println("Exiting...")
