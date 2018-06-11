@@ -1,4 +1,4 @@
-package parser
+package dev-io-modules
 
 import (
   "fmt"
@@ -6,6 +6,7 @@ import (
   ws "github.com/gorilla/websocket"
 )
 
+//this will 
 func main() {
 	var wsDialer ws.Dialer
 	wsConn, _, err := wsDialer.Dial("wss://ws-feed.gdax.com", nil)
