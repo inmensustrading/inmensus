@@ -104,6 +104,7 @@ func main() {
 	fmt.Println(iomList)
 
 	//connect to any output modules
+	outModules := make([]*rpc.Client, len(iomList))
 	if config["output-std"] != "yes" {
 		//connect to the servers on the list
 		for a := 0; a < len(iomList); a++ {
@@ -116,10 +117,11 @@ func main() {
 			}
 			fmt.Println("Connected to port " + port)
 
-			//test/sample
-			err = client.Call("Arith.Multiply", nil, nil)
+			outModules[a] = client
 		}
 	}
+
+	//set up command loop
 
 	//clean up and conclude
 	fmt.Println("Exiting...")
