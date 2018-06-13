@@ -1,4 +1,4 @@
-package dev-io-modules
+package io
 
 import (
   "fmt"
@@ -37,23 +37,29 @@ func main() {
 			break
 		}
 
-		if message.Type == "l2update" {
+		if message.Type == "snapshot" {
 			wsConn.ReadJSON(&message)
-			changes := message.Changes
-			outerLength := len(changes)
-			innerLength := len(changes[0])
-			for i := 0; i < outerLength; i++ {
-				for j := 0; j < innerLength; j++ {
-					fmt.Printf("%s \n",changes[i][j])
-					fmt.Printf("  i,j: %d%d \n", i, j)
+			productId := message.ProductId
+			asks := message.Asks
+			bids := message.Bids
+			outerAskLength := len(asks)
+			innerAskLength := len(asks[0])
+			fmt.Printf("productId: %s", productId)
+			for i := 0; i < outerAskLength; i++ {
+				for j := 0; j < innerAskLength; j++ {
+					fmt.Printf("Ask: %s \n",asks[i][j])
+					fmt.Printf("i,j: %d%d \n", i, j)
 				}
 			}
+			outerBidLength := len(bids)
+			innerBidLength := len(bids[0])
+			for i := 0; i < outerBidLength; i++ {
+				for j := 0; j < innerBidLength; j++ {
+				 	fmt.Printf("Bid: %s \n", bids[i][j])
+				 }
+				
+			}
 		}
-		
-		if message.Type == "match" {
-			println("Got a match")
-		}
-		
 	}
 }
 
