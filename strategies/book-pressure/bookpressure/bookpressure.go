@@ -3,6 +3,7 @@ package bookpressure
 import (
 	"bufio"
 	"container/heap"
+	"container/list"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -38,20 +39,37 @@ type OnInputEventArgs struct {
 	volume       float64
 }
 
-//IntHeap gloabl heap var to keep track of orderbook
-type IntHeap []int
-
-func (h IntHeap) Len() int           { return len(h) }
-func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
-func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
-
-func (h *IntHeap) Push(x interface{}) {
-	// Push and Pop use pointer receivers because they modify the slice's length,
-	// not just its contents.
-	*h = append(*h, x.(int))
+//F64Heap gloabl heap var to keep track of orderbook
+type F64HItem struct {
+	value float64
+	index int
 }
 
-func (h *IntHeap) Pop() interface{} {
+type F64Heap []F64HItem
+
+func (h F64Heap) Len() int {
+	return len(h)
+}
+func (h F64Heap) Less(i, j int) bool {
+	return h[i].value < h[j].value
+}
+func (h F64Heap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+	h[i].index = j
+	h[j].index = i
+}
+
+func (h *F64Heap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	item := F64HItem{
+		value: x.(float64),
+		index: len(*h),
+	}
+	*h = append(*h, item)
+}
+
+func (h *F64Heap) Pop() interface{} {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -60,31 +78,63 @@ func (h *IntHeap) Pop() interface{} {
 }
 
 //orderbook for buy/sell limit orders mapped by currency->orders
-var buyOrderbook map[string]*IntHeap
-var sellOrderbook map[string]*IntHeap
+var buyOrderbook map[string]*F64Heap
+var sellOrderbook map[string]*F64Heap
+
+//complimentary structures for orderbook heaps to locate elements by value in heap
+var revBuyOB map[string]*map[float64]*list.List
+var revSellOB map[string]*map[float64]*list.List
 
 //OnInputEvent called by IOM when input event has arrived
 func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
-	//init IntHeap for this currency if it doesn't exist yet
+	//init F64Heap for this currency if it doesn't exist yet
 	if _, ok := buyOrderbook[(*args).currency]; !ok {
-		buyOrderbook[(*args).currency] = &IntHeap{}
+		buyOrderbook[(*args).currency] = &F64Heap{}
+		//TODO: init map ptr
 	}
 	if _, ok := buyOrderbook[(*args).currency]; !ok {
-		sellOrderbook[(*args).currency] = &IntHeap{}
+		sellOrderbook[(*args).currency] = &F64Heap{}
+		//TODO: init map ptr
 	}
 
 	if (*args).eventType == PlaceBuy {
 		fmt.Println("PlaceBuy received.")
-		heap.Push(buyOrderbook[(*args).currency], (*args).volume)
+
+		relOB := buyOrderbook[(*args).currency]
+		heap.Push(relOB, (*args).volume)
+		(*revBuyOB[(*args).currency])[(*args).volume].PushBack(&((*relOB)[relOB.Len()-1]))
 	} else if (*args).eventType == PlaceSell {
 		fmt.Println("PlaceSell received.")
-		heap.Push(sellOrderbook[(*args).currency], (*args).volume)
+
+		relOB := sellOrderbook[(*args).currency]
+		heap.Push(relOB, (*args).volume)
+		(*revSellOB[(*args).currency])[(*args).volume].PushBack(&((*relOB)[relOB.Len()-1]))
 	} else if (*args).eventType == RemoveBuy {
 		fmt.Println("RemoveBuy received.")
-		heap.Push(buyOrderbook[(*args).currency], (*args).volume) //TODO: change from heap to set
+
+		relOB := buyOrderbook[(*args).currency]
+		relRevOB := (*revBuyOB[(*args).currency])[(*args).volume]
+		f64HItemRef := relRevOB.Front()
+		castOF64HI, ok := (*f64HItemRef).Value.(*F64HItem)
+		if !ok {
+			fmt.Println("Interface type assertion went wrong in OnInputEvent.")
+			panic(-1)
+		}
+		heap.Remove(relOB, (*castOF64HI).index)
+		relRevOB.Remove(f64HItemRef)
 	} else if (*args).eventType == RemoveSell {
 		fmt.Println("RemoveSell received.")
-		heap.Push(sellOrderbook[(*args).currency], (*args).volume) //TODO: change from heap to set
+
+		relOB := sellOrderbook[(*args).currency]
+		relRevOB := (*revSellOB[(*args).currency])[(*args).volume]
+		f64HItemRef := relRevOB.Front()
+		castOF64HI, ok := (*f64HItemRef).Value.(*F64HItem)
+		if !ok {
+			fmt.Println("Interface type assertion went wrong in OnInputEvent.")
+			panic(-1)
+		}
+		heap.Remove(relOB, (*castOF64HI).index)
+		relRevOB.Remove(f64HItemRef)
 	} else {
 		//unrecognized
 		defer fmt.Println("Unrecognized input event from IM.")
@@ -230,4 +280,6 @@ func checkError(e error) {
 //called on an interval
 func onStratTimer() {
 	fmt.Println("Timed function called.")
+
+	//process orderbook state here
 }
