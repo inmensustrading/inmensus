@@ -1,14 +1,28 @@
 package bookpressure
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
+	"os"
 	"strconv"
 	"strings"
+	"time"
+)
+
+//TODO: import this from iom packages
+type exchangeEvent int
+
+//enum
+const (
+	Unknown   exchangeEvent = iota
+	PlaceBuy                // a new buy order was placed
+	PlaceSell               // a new sell order was placed
+	Remove                  // an order has be removed from the orderbook.
 )
 
 //StrategyServer int-equivalent error code return type
@@ -16,15 +30,25 @@ type StrategyServer int
 
 //OnInputEventArgs argument type for OnInputEvent
 type OnInputEventArgs struct {
-	exchangeName string
-	eventType    string
+	exchangeName string //TODO: don't ignore this
+	eventType    exchangeEvent
 	currency     string
 	volume       float64
 }
 
 //OnInputEvent called by IOM when input event has arrived
 func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
-	(*args).exchangeName = "what"
+	if (*args).eventType == PlaceBuy {
+		fmt.Println("wow")
+	} else if (*args).eventType == PlaceSell {
+
+	} else if (*args).eventType == Remove {
+
+	} else {
+		//unrecognized
+		defer fmt.Println("Unrecognized input event from IM")
+	}
+
 	return nil
 }
 
@@ -113,7 +137,44 @@ func BookPressure(configPath string) {
 		}
 	}
 
-	//set up command loop
+	//setup timed function calls
+	stratTimer, err := strconv.Atoi(config["strat-timer"])
+	if err != nil {
+		log.Fatal("strat-timer configuration:", err)
+	}
+	ticker := time.NewTicker(time.Duration(stratTimer) * time.Millisecond)
+	tickerQuit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				onStratTimer()
+			case <-tickerQuit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	//setup command loop to exit on 'exit'
+	reader := bufio.NewReader(os.Stdin)
+	for true {
+		fmt.Print("Enter command: ")
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal("error reading command:", err)
+		}
+		text = strings.TrimSpace(text)
+
+		if text == "exit" {
+			close(tickerQuit)
+			break
+		} else if text == "help" {
+			fmt.Println("Available commands: 'exit'.")
+		} else {
+			fmt.Println("Unrecognized command.")
+		}
+	}
 
 	//clean up and conclude
 	fmt.Println("Exiting...")
@@ -123,4 +184,9 @@ func checkError(e error) {
 	if e != nil {
 		panic(e)
 	}
+}
+
+//called on an interval
+func onStratTimer() {
+	fmt.Println("strat timer called")
 }
