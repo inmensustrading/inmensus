@@ -1,4 +1,4 @@
-package main
+package bookpressure
 
 import (
 	"fmt"
@@ -28,19 +28,14 @@ func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error 
 	return nil
 }
 
-func checkError(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-func main() {
+//BookPressure external calling designation
+func BookPressure(configPath string) {
 	//init
 	fmt.Println("Starting...")
 	fmt.Println("Orderbook pressure strategy, taken from https://goo.gl/HH6P7V.")
 
 	//read config into map
-	dat, err := ioutil.ReadFile("config.ini")
+	dat, err := ioutil.ReadFile(configPath)
 	checkError(err)
 	configStr := string(dat)
 
@@ -74,7 +69,7 @@ func main() {
 		log.Fatal("Listen error:", err)
 	}
 	go http.Serve(listen, nil)
-	fmt.Println("Listening setup.")
+	fmt.Println("Listening setup on port " + config["strategy-port"] + ".")
 
 	//fetch the ioms from the config
 	iomHighPort, err := strconv.Atoi(config["iom-port-high"])
@@ -100,9 +95,6 @@ func main() {
 		}
 	}
 
-	fmt.Println(iomHighPort)
-	fmt.Println(iomList)
-
 	//connect to any output modules
 	outModules := make([]*rpc.Client, len(iomList))
 	if config["output-std"] != "yes" {
@@ -125,4 +117,10 @@ func main() {
 
 	//clean up and conclude
 	fmt.Println("Exiting...")
+}
+
+func checkError(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
