@@ -2,6 +2,7 @@ package bookpressure
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -19,10 +20,11 @@ type exchangeEvent int
 
 //enum
 const (
-	Unknown   exchangeEvent = iota
-	PlaceBuy                // a new buy order was placed
-	PlaceSell               // a new sell order was placed
-	Remove                  // an order has be removed from the orderbook.
+	Unknown    exchangeEvent = iota
+	PlaceBuy                 // a new buy order was placed
+	PlaceSell                // a new sell order was placed
+	RemoveBuy                // an order has be removed from the orderbook
+	RemoveSell               // sell order removed
 )
 
 //StrategyServer int-equivalent error code return type
@@ -32,21 +34,60 @@ type StrategyServer int
 type OnInputEventArgs struct {
 	exchangeName string //TODO: don't ignore this
 	eventType    exchangeEvent
-	currency     string
+	currency     string //TODO: actually use this
 	volume       float64
 }
 
+//IntHeap gloabl heap var to keep track of orderbook
+type IntHeap []int
+
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *IntHeap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(int))
+}
+
+func (h *IntHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+//orderbook for buy/sell limit orders mapped by currency->orders
+var buyOrderbook map[string]*IntHeap
+var sellOrderbook map[string]*IntHeap
+
 //OnInputEvent called by IOM when input event has arrived
 func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
+	//init IntHeap for this currency if it doesn't exist yet
+	if _, ok := buyOrderbook[(*args).currency]; !ok {
+		buyOrderbook[(*args).currency] = &IntHeap{}
+	}
+	if _, ok := buyOrderbook[(*args).currency]; !ok {
+		sellOrderbook[(*args).currency] = &IntHeap{}
+	}
+
 	if (*args).eventType == PlaceBuy {
-		fmt.Println("wow")
+		fmt.Println("PlaceBuy received.")
+		heap.Push(buyOrderbook[(*args).currency], (*args).volume)
 	} else if (*args).eventType == PlaceSell {
-
-	} else if (*args).eventType == Remove {
-
+		fmt.Println("PlaceSell received.")
+		heap.Push(sellOrderbook[(*args).currency], (*args).volume)
+	} else if (*args).eventType == RemoveBuy {
+		fmt.Println("RemoveBuy received.")
+		heap.Push(buyOrderbook[(*args).currency], (*args).volume) //TODO: change from heap to set
+	} else if (*args).eventType == RemoveSell {
+		fmt.Println("RemoveSell received.")
+		heap.Push(sellOrderbook[(*args).currency], (*args).volume) //TODO: change from heap to set
 	} else {
 		//unrecognized
-		defer fmt.Println("Unrecognized input event from IM")
+		defer fmt.Println("Unrecognized input event from IM.")
 	}
 
 	return nil
@@ -188,5 +229,5 @@ func checkError(e error) {
 
 //called on an interval
 func onStratTimer() {
-	fmt.Println("strat timer called")
+	fmt.Println("Timed function called.")
 }
