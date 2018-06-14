@@ -14,21 +14,14 @@ import (
 	"time"
 
 	"../../../io-modules/iombase"
+	"../../strategybase"
 )
 
 //StrategyServer int-equivalent error code return type
 type StrategyServer int
 
-//OnInputEventArgs argument type for OnInputEvent
-type OnInputEventArgs struct {
-	ExchangeName string //TODO: don't ignore this
-	EventType    iombase.ExchangeEvent
-	Currency     string //TODO: actually use this
-	Volume       float64
-}
-
 //OnInputEvent called by IOM when input event has arrived
-func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
+func (t *StrategyServer) OnInputEvent(args *strategybase.OnInputEventArgs, reply *int) error {
 	if (*args).EventType == iombase.PlaceBuy {
 		fmt.Println("PlaceBuy received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
 	} else if (*args).EventType == iombase.PlaceSell {
