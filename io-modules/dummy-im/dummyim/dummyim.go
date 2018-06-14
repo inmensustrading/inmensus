@@ -95,16 +95,18 @@ func DummyIM(configPath string) {
 			fmt.Println("Available commands: 'exit', 'test-event', 'count'.")
 		} else if text == "test-event" {
 			fmt.Println("Sending event to all connected strategies who have registered.")
-			args := &strategybase.OnInputEventArgs{
-				ExchangeName: "dummy-exchange",
-				EventType:    iombase.PlaceBuy,
-				Currency:     "BTC->ETH",
-				Volume:       420.69,
-			}
-			var reply int
-			err = client.Call("InputModuleServer.RegisterStrategy", args, &reply)
-			if err != nil {
-				log.Fatal("RegisterStrategy error:", err)
+			for a := 0; a < len(stratList); a++ {
+				args := &strategybase.OnInputEventArgs{
+					ExchangeName: "dummy-exchange",
+					EventType:    iombase.PlaceBuy,
+					Currency:     "BTC->ETH",
+					Volume:       420.69,
+				}
+				var reply int
+				err = stratList[a].Call("StrategyServer.OnInputEvent", args, &reply)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		} else if text == "count" {
 			fmt.Println("Strategies registered: ", len(stratList), ".")
