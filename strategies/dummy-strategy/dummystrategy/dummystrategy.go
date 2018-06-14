@@ -1,4 +1,4 @@
-package bookpressure
+package dummystrategy
 
 import (
 	"bufio"
@@ -12,18 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
 
-//TODO: import this from iom packages
-type exchangeEvent int
-
-//enum
-const (
-	Unknown    exchangeEvent = iota
-	PlaceBuy                 // a new buy order was placed
-	PlaceSell                // a new sell order was placed
-	RemoveBuy                // an order has be removed from the orderbook
-	RemoveSell               // sell order removed
+	"../../../io-modules/iombase"
 )
 
 //StrategyServer int-equivalent error code return type
@@ -31,22 +21,22 @@ type StrategyServer int
 
 //OnInputEventArgs argument type for OnInputEvent
 type OnInputEventArgs struct {
-	exchangeName string //TODO: don't ignore this
-	eventType    exchangeEvent
-	currency     string //TODO: actually use this
-	volume       float64
+	ExchangeName string //TODO: don't ignore this
+	EventType    iombase.ExchangeEvent
+	Currency     string //TODO: actually use this
+	Volume       float64
 }
 
 //OnInputEvent called by IOM when input event has arrived
 func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
-	if (*args).eventType == PlaceBuy {
-		fmt.Println("PlaceBuy received: exchange=" + (*args).exchangeName + "; currency=" + (*args).currency + "; volume=" + floatToString((*args).volume))
-	} else if (*args).eventType == PlaceSell {
-		fmt.Println("PlaceSell received: exchange=" + (*args).exchangeName + "; currency=" + (*args).currency + "; volume=" + floatToString((*args).volume))
-	} else if (*args).eventType == RemoveBuy {
-		fmt.Println("RemoveBuy received: exchange=" + (*args).exchangeName + "; currency=" + (*args).currency + "; volume=" + floatToString((*args).volume))
-	} else if (*args).eventType == RemoveSell {
-		fmt.Println("RemoveSell received: exchange=" + (*args).exchangeName + "; currency=" + (*args).currency + "; volume=" + floatToString((*args).volume))
+	if (*args).EventType == iombase.PlaceBuy {
+		fmt.Println("PlaceBuy received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
+	} else if (*args).EventType == iombase.PlaceSell {
+		fmt.Println("PlaceSell received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
+	} else if (*args).EventType == iombase.RemoveBuy {
+		fmt.Println("RemoveBuy received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
+	} else if (*args).EventType == iombase.RemoveSell {
+		fmt.Println("RemoveSell received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
 	} else {
 		//unrecognized
 		defer fmt.Println("Unrecognized input event from IM.")
@@ -56,10 +46,10 @@ func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error 
 }
 
 //BookPressure external calling designation
-func BookPressure(configPath string) {
+func DummyStrategy(configPath string) {
 	//init
 	fmt.Println("Starting...")
-	fmt.Println("Orderbook pressure strategy, taken from https://goo.gl/HH6P7V.")
+	fmt.Println("Dummy strategy.")
 
 	//read config into map
 	dat, err := ioutil.ReadFile(configPath)
@@ -122,6 +112,37 @@ func BookPressure(configPath string) {
 		}
 	}
 
+	//connect to any input modules and call RegisterStrategy
+	inModules := make([]*rpc.Client, len(iomList))
+	for a := 0; a < len(iomList); a++ {
+		inModules[a] = nil
+		port := strconv.Itoa(iomHighPort - iomList[a]*2 + 1)
+
+		client, err := rpc.DialHTTP("tcp", "localhost:"+port)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("Connected to input module at port " + port + ".")
+			inModules[a] = client
+
+			//call RegisterStrategy
+			args := &iombase.RegisterStrategyArgs{
+				StrategyPort: config["strategy-port"],
+				StrategyName: config["strategy-name"],
+				ListenEvents: nil,
+				ListenData:   nil,
+			}
+			var reply int
+			err = client.Call("InputModuleServer.RegisterStrategy", args, &reply)
+			if err != nil {
+				log.Fatal("RegisterStrategy error:", err)
+			}
+
+			fmt.Println("Strategy registered with IM.")
+		}
+	}
+
+	//TODO: standardize with above
 	//connect to any output modules
 	outModules := make([]*rpc.Client, len(iomList))
 	if config["output-std"] != "yes" {
@@ -129,12 +150,11 @@ func BookPressure(configPath string) {
 		for a := 0; a < len(iomList); a++ {
 			port := strconv.Itoa(iomHighPort - iomList[a]*2)
 
-			//TODO: move client to a higher scope
 			client, err := rpc.DialHTTP("tcp", "localhost:"+port)
 			if err != nil {
 				log.Fatal("dialing:", err)
 			}
-			fmt.Println("Connected to port " + port)
+			fmt.Println("Connected to output module at port " + port)
 
 			outModules[a] = client
 		}
