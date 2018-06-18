@@ -30,6 +30,8 @@ func (t *StrategyServer) OnInputEvent(args *strategybase.OnInputEventArgs, reply
 		fmt.Println("RemoveBuy received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
 	} else if (*args).EventType == iombase.RemoveSell {
 		fmt.Println("RemoveSell received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume))
+	} else if (*args).EventType == iombase.L2SnapshotAsk {
+		fmt.Println("L2SnapshotAsk received: exchange=" + (*args).ExchangeName + "; currency=" + (*args).Currency + "; volume=" + floatToString((*args).Volume) + "; price=" + floatToString((*args).Price))
 	} else {
 		//unrecognized
 		defer fmt.Println("Unrecognized input event from IM.")
