@@ -6,13 +6,13 @@ Monorepo for Inmensus Trading.
 VC using git. Include source code, exclude generated code and binaries.
 
 ## Branches
-Individual contributions to the master branch must be committed to an individual branch first, and commits merged into master later. Preferably, prior to merging into master, another member will conduct code reviews of said commits. This avoids hasty commits which break master as well as painful merge conflicts.
+Individual contributions to the `staging` branch must be committed to an individual branch first, and commits merged into `staging` later. Preferably, prior to merging into `staging`, another member will conduct code reviews of said commits. This avoids hasty commits which break `staging` as well as painful merge conflicts.
+* Perhaps this isn't too bad for small changes while we are starting up.
+
+Commits in `staging` can then be merged into `production`, the default branch, once all members have reviewed the code changes. `production` should always contain functional code, and reflect the status of the running server instances.
 
 ## Directory Organization
 Directories are organized as specified in the master pipeline overview available at (WPI).
-Empty directories can be primed for git's version control using an empty .gitignore.
-
-//not sure if this is the best way to do this
 
 # Documentation
 All documentation will be organized on the Github Wiki.
