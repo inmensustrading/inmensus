@@ -1,4 +1,6 @@
-/.vscode
+\.vscode
+
+*\.vs
 
 *.exe
 *.obj
