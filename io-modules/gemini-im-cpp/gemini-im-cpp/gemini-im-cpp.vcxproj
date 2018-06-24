@@ -51,6 +51,18 @@
     <IntDir>$(OutDir)</IntDir>
     <TargetName>$(ProjectName)_$(Configuration)_$(PlatformTarget)</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -81,7 +93,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\client.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\close.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\connection.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\connection_base.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\endpoint.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\endpoint_base.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\error.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\frame.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\server.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\uri.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\utf8_validator.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\utilities.hpp" />
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\version.hpp" />
     <ClInclude Include="BuildID.h" />
+    <ClInclude Include="main.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -89,6 +115,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

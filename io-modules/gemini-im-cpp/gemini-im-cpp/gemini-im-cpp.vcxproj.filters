@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="websocketpp">
+      <UniqueIdentifier>{d1e4174c-287e-418e-8c97-b60f6489e338}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuildID.h">
@@ -20,6 +23,48 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\client.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\close.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\connection.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\connection_base.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\endpoint.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\endpoint_base.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\error.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\frame.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\server.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\uri.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\utf8_validator.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\utilities.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\common\websocketpp-master\websocketpp\version.hpp">
+      <Filter>websocketpp</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -31,5 +76,10 @@
     <ResourceCompile Include="resource.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
