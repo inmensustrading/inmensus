@@ -1,17 +1,17 @@
 package im
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
-	"os"
+	"strconv"
 	"strings"
 
-	"../../iombase"
+	ws "github.com/gorilla/websocket"
+	iombase "github.com/inmensustrading/inmensus/io-modules/iombase"
 	"github.com/inmensustrading/inmensus/strategies/strategybase"
 	gdax "github.com/preichenberger/go-gdax"
 )
@@ -21,6 +21,12 @@ var stratList []*rpc.Client
 
 //InputModuleServer needs this declaration in every IM
 type InputModuleServer int
+
+//general purpose tuple
+type Ask struct {
+	price float64
+	size  float64
+}
 
 //RegisterStrategy read the docs
 func (t *InputModuleServer) RegisterStrategy(args *iombase.RegisterStrategyArgs, reply *int) error {
@@ -105,7 +111,7 @@ func IM(configPath string) {
 	message := gdax.Message{}
 
 	//setup command loop to exit on 'exit'
-	reader := bufio.NewReader(os.Stdin)
+	//reader := bufio.NewReader(os.Stdin)
 	for true {
 
 		/*
@@ -156,13 +162,17 @@ func IM(configPath string) {
 			fmt.Println("sending initial l2 snapshot to strats")
 			//Access the message data once instead of every time through loop
 			currencyType := message.ProductId
-			askData := make([]iombase.Ask)
+			askData := make([]*Ask, 10)
 			for i := 0; i < len(message.Asks); i++ {
-				ask := &iombase.Ask{
-					price: message.Asks[i][0],
-					size:  message.Asks[i][1],
+				sizeValue, errSize := strconv.ParseFloat(message.Asks[i][0], 64)
+				priceValue, errPrice := strconv.ParseFloat(message.Asks[i][1], 64)
+				if ((errSize == nil) && (errPrice == nil)) {
+					ask := &Ask({
+						price: priceValue,
+						size:  sizeValue,
+					})
+					askData = append(askData, ask)
 				}
-				askData.append(ask)
 			}
 
 			randomAsk := askData[0]
@@ -173,7 +183,7 @@ func IM(configPath string) {
 					EventType:    iombase.L2SnapshotAsk,
 					Currency:     currencyType,
 					Volume:       randomAsk.size,
-					Prce:         randomAsk.price,
+					Price:        randomAsk.price,
 				}
 				var reply int
 				err = stratList[a].Call("StrategyServer.OnInputEvent", args, &reply)
