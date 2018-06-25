@@ -1,7 +1,7 @@
 package strategybase
 
 import (
-	"../../io-modules/iombase"
+	"github.com/inmensustrading/inmensus/io-modules/iombase"
 )
 
 //OnInputEventArgs argument type for OnInputEvent
