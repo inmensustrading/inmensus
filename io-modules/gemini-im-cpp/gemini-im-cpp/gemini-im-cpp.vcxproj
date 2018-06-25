@@ -52,16 +52,16 @@
     <TargetName>$(ProjectName)_$(Configuration)_$(PlatformTarget)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\boost_1_67_0;C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\boost_1_67_0;C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\boost_1_67_0;C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Main\Active\Documents\Inmensus\inmensus\common\boost_1_67_0;C:\Main\Active\Documents\Inmensus\inmensus\common\websocketpp-master\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
