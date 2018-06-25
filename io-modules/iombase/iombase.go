@@ -34,3 +34,9 @@ type RegisterStrategyArgs struct {
 	ListenEvents []ExchangeEvent
 	ListenData   []ExchangeDatum
 }
+
+//general purpose tuple
+type Ask struct {
+	Price float64
+	Size  float64
+}
