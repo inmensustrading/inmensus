@@ -1,7 +1,7 @@
 package strategybase
 
 import (
-	"../../io-modules/iombase"
+	"github.com/inmensustrading/inmensus/io-modules/iombase"
 )
 
 //OnInputEventArgs argument type for OnInputEvent
@@ -10,4 +10,5 @@ type OnInputEventArgs struct {
 	EventType    iombase.ExchangeEvent
 	Currency     string //TODO: actually use this
 	Volume       float64
+	Price        float64
 }
