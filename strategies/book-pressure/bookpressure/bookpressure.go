@@ -12,43 +12,26 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
 
-//TODO: import this from iom packages
-type exchangeEvent int
-
-//enum
-const (
-	Unknown    exchangeEvent = iota
-	PlaceBuy                 // a new buy order was placed
-	PlaceSell                // a new sell order was placed
-	RemoveBuy                // an order has be removed from the orderbook
-	RemoveSell               // sell order removed
+	"../../../io-modules/iombase"
+	"../../strategybase"
 )
 
 //StrategyServer int-equivalent error code return type
 type StrategyServer int
 
-//OnInputEventArgs argument type for OnInputEvent
-type OnInputEventArgs struct {
-	exchangeName string //TODO: don't ignore this
-	eventType    exchangeEvent
-	currency     string //TODO: actually use this
-	volume       float64
-}
-
 //OnInputEvent called by IOM when input event has arrived
-func (t *StrategyServer) OnInputEvent(args *OnInputEventArgs, reply *int) error {
-	if (*args).eventType == PlaceBuy {
+func (t *StrategyServer) OnInputEvent(args *strategybase.OnInputEventArgs, reply *int) error {
+	if (*args).eventType == iombase.PlaceBuy {
 		fmt.Println("PlaceBuy received.")
 
-	} else if (*args).eventType == PlaceSell {
+	} else if (*args).eventType == iombase.PlaceSell {
 		fmt.Println("PlaceSell received.")
 
-	} else if (*args).eventType == RemoveBuy {
+	} else if (*args).eventType == iombase.RemoveBuy {
 		fmt.Println("RemoveBuy received.")
 
-	} else if (*args).eventType == RemoveSell {
+	} else if (*args).eventType == iombase.RemoveSell {
 		fmt.Println("RemoveSell received.")
 
 	} else {
