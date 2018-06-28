@@ -5,3 +5,4 @@
 # files
 **/*.exe
 **/*.obj
+**/*.npy
