@@ -37,5 +37,6 @@ type RegisterStrategyArgs struct {
 
 //general purpose tuple
 type Ask struct {
-	price, size interface{}
+	Price float64
+	Size  float64
 }

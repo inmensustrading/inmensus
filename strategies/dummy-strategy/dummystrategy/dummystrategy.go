@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"../../../io-modules/iombase"
-	"../../strategybase"
+	"github.com/inmensustrading/inmensus/io-modules/iombase"
+	"github.com/inmensustrading/inmensus/strategies/strategybase"
 )
 
 //StrategyServer int-equivalent error code return type

@@ -5,3 +5,4 @@ common/boost_1_67_0
 
 *.exe
 *.obj
+*.npy
