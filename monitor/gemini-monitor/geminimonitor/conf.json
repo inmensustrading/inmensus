@@ -1,0 +1,13 @@
+{
+	"WebsocketURL":		"wss://api.gemini.com/v1/marketdata/",
+	"WebsocketParams":	[
+			"heartbeat=false",
+			"top_of_book=false",
+			"bids=true",
+			"offers=true",
+			"trades=false",
+			"auctions=false"
+		],
+	"TimerMS":			500,
+	"DBIP":				"18.191.128.157"
+}
