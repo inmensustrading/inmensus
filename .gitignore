@@ -1,4 +1,7 @@
-/.vscode
+# directories
+**/.vscode
+**/.vs
 
-*.exe
-*.obj
+# files
+**/*.exe
+**/*.obj
