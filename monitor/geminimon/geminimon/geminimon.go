@@ -19,7 +19,10 @@ type configType struct {
 	WebsocketURL    string
 	WebsocketParams []string
 	TimerMS         int
-	DBIP            string
+	MySQLEndpoint   string
+	MySQLIP         string
+	MySQLUsername   string
+	MySQLPassword   string
 }
 
 //OnModuleStart external calling designation
