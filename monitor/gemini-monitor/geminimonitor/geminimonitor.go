@@ -3,12 +3,11 @@ package geminimonitor
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
-	"rain"
+	"../../../common/rain"
 
 	"github.com/gorilla/websocket"
 	"github.com/tkanos/gonfig"
@@ -40,21 +39,17 @@ func OnModuleStart(configPath string) {
 	}
 	addParams = strings.TrimSuffix(addParams, "&")
 	c, _, err := websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
+	rain.CheckError(err)
 	defer c.Close()
 
 	done := make(chan struct{})
 
+	//
 	go func() {
 		defer close(done)
 		for {
 			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
+			rain.CheckError(err)
 			onWSMessage(message)
 		}
 	}()
@@ -78,18 +73,13 @@ func OnModuleStart(configPath string) {
 	for true {
 		fmt.Print("Enter command: ")
 		text, err := reader.ReadString('\n')
-		if err != nil {
-			log.Fatal("error reading command:", err)
-		}
+		rain.CheckError(err)
 		text = strings.TrimSpace(text)
 
 		if text == "exit" {
 			//cleanly exit monitoring
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				fmt.Println("Error while writing websocket close message:", err)
-				return
-			}
+			rain.CheckError(err)
 			break
 		} else if text == "help" {
 			fmt.Println("Available commands: 'exit', 'test-event', 'count'.")
@@ -107,5 +97,6 @@ func onTimerCall() {
 }
 
 func onWSMessage(message []byte) {
-	fmt.Println(string(message[:]))
+	//fmt.Println(string(message[:]))
+	fmt.Println("message")
 }
