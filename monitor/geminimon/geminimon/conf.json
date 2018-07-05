@@ -9,5 +9,7 @@
 			"auctions=false"
 		],
 	"TimerMS":			500,
-	"DBIP":				"18.191.128.157"
+	"MySQLEndpoint":			"inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com",
+	"MySQLUsername":	"GILGAMESH",
+	"MySQLPassword":	"3Dd7tAN66wqbjDaD"
 }

@@ -102,10 +102,12 @@ func OnModuleStart() {
 	fmt.Println("Exiting...")
 
 	//wait for websocket to end
+	//TODO: make this better
 	time.Sleep(time.Second)
 }
 
 func onTimerCall() {
+
 }
 
 func onWSMessage(message []byte) {
