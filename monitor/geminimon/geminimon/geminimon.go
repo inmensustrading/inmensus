@@ -1,9 +1,11 @@
-package geminimonitor
+package geminimon
 
 import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,14 +23,19 @@ type configType struct {
 }
 
 //OnModuleStart external calling designation
-func OnModuleStart(configPath string) {
+func OnModuleStart() {
 	//init
 	fmt.Println("Starting...")
 	fmt.Println("Gemini Monitor.")
 
 	//read config
 	config := configType{}
-	err := gonfig.GetConf(configPath, &config)
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("No caller information.")
+	}
+	fmt.Println("File directory: ", path.Dir(filename))
+	err := gonfig.GetConf(path.Dir(filename)+"/conf.json", &config)
 	rain.CheckError(err)
 	fmt.Println("Configuration: ", config)
 
@@ -44,16 +51,19 @@ func OnModuleStart(configPath string) {
 
 	done := make(chan struct{})
 
-	//
+	//message handling from websocket
 	go func() {
 		defer close(done)
 		for {
+			//I think this blocks
 			_, message, err := c.ReadMessage()
 			rain.CheckError(err)
+
 			onWSMessage(message)
 		}
 	}()
 
+	//setup separate timer thread
 	ticker := time.NewTicker(time.Duration(config.TimerMS) * time.Millisecond)
 	tickerQuit := make(chan struct{})
 	go func() {
@@ -88,8 +98,10 @@ func OnModuleStart(configPath string) {
 		}
 	}
 
-	//clean up and conclude
+	//conclude
 	fmt.Println("Exiting...")
+
+	//wait for websocket to end
 	time.Sleep(time.Second)
 }
 
@@ -97,6 +109,5 @@ func onTimerCall() {
 }
 
 func onWSMessage(message []byte) {
-	//fmt.Println(string(message[:]))
-	fmt.Println("message")
+	fmt.Println(string(message[:]))
 }
