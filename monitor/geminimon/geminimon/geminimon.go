@@ -36,7 +36,6 @@ type dbRowType struct {
 	timestampms int64
 	side        string
 	price       float64
-	remaining   float64
 	delta       float64
 	reason      string
 }
@@ -153,15 +152,15 @@ func onTimerCall() {
 	//update db
 	queryPart := dbUpdateBuffer.Bytes()
 	if dbUpdateBuffer.Len() == 0 {
-		fmt.Println("no updates")
-		fmt.Println()
+		//fmt.Println("no updates")
+		//fmt.Println()
 		return
 	}
 
 	queryPart[len(queryPart)-1] = ';'
 	query := "insert into " + config.ChangeEventsTable + " values " + string(queryPart)
-	fmt.Println(query)
-	fmt.Println()
+	//fmt.Println(query)
+	//fmt.Println()
 	dbUpdateBuffer.Reset()
 
 	_, _, err := db.Query(query)
@@ -179,15 +178,19 @@ func onWSMessage(message []byte) {
 	}
 
 	if response["type"].(string) != "update" {
-		return
-	}
-	if response["timestampms"] == nil {
-		//probably initial event
+		fmt.Println("not update type")
 		return
 	}
 
 	dbUpdate := dbRowType{}
-	dbUpdate.timestampms = int64(response["timestampms"].(float64))
+	if response["timestampms"] == nil {
+		//probably initial event
+		//set timestamp to be current time
+		dbUpdate.timestampms = time.Now().UnixNano() / int64(time.Millisecond)
+	} else {
+		dbUpdate.timestampms = int64(response["timestampms"].(float64))
+	}
+
 	events := response["events"].([]interface{})
 	for a := 0; a < len(events); a++ {
 		cur := events[a].(map[string]interface{})
@@ -197,16 +200,14 @@ func onWSMessage(message []byte) {
 
 		dbUpdate.side = cur["side"].(string)
 		dbUpdate.delta, _ = strconv.ParseFloat(cur["delta"].(string), 64)
-		dbUpdate.remaining, _ = strconv.ParseFloat(cur["remaining"].(string), 64)
 		dbUpdate.price, _ = strconv.ParseFloat(cur["price"].(string), 64)
 		dbUpdate.reason = cur["reason"].(string)
 
 		//fmt.Println(dbUpdate)
-		dbUpdateBuffer.WriteString(fmt.Sprintf("(%d, %q, %f, %f, %f, %q),",
+		dbUpdateBuffer.WriteString(fmt.Sprintf("(%d, %q, %f, %f, %q),",
 			dbUpdate.timestampms,
 			dbUpdate.side,
 			dbUpdate.delta,
-			dbUpdate.remaining,
 			dbUpdate.price,
 			dbUpdate.reason))
 	}
