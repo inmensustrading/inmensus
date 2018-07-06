@@ -14,5 +14,5 @@
 	"MySQLUsername":		"GILGAMESH",
 	"MySQLPassword":		"3Dd7tAN66wqbjDaD",
 	"DatabaseName":			"inmensus_trading_db_1",
-	"ChangeEventsTable":	"change_events"
+	"ChangeEventsTable":	"gemini_change"
 }

@@ -21,17 +21,17 @@ conn = pymysql.connect(
 	db="inmensus_trading_db_1")
 cur = conn.cursor()
 
-cur.execute("show columns from change_events;")
+cur.execute("show columns from gemini_change;")
 for r in cur:
     print(r)
-cur.execute("select count(*) from change_events;")
+cur.execute("select count(*) from gemini_change;")
 print("Size: ", end="")
 for r in cur:
     print(r)
 input("Enter to continue fetching...")
 
 #get all data
-cur.execute("select * from change_events;")
+cur.execute("select * from gemini_change;")
 with open(toRelPath("assets\\fetch-mysql.json"), "w") as outfile:
     json.dump(cur.fetchall(), outfile)
 

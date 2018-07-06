@@ -36,7 +36,7 @@ type dbRowType struct {
 	timestampms int64
 	side        string
 	price       float64
-	delta       float64
+	remaining   float64
 	reason      string
 }
 
@@ -199,16 +199,16 @@ func onWSMessage(message []byte) {
 		}
 
 		dbUpdate.side = cur["side"].(string)
-		dbUpdate.delta, _ = strconv.ParseFloat(cur["delta"].(string), 64)
 		dbUpdate.price, _ = strconv.ParseFloat(cur["price"].(string), 64)
+		dbUpdate.remaining, _ = strconv.ParseFloat(cur["remaining"].(string), 64)
 		dbUpdate.reason = cur["reason"].(string)
 
 		//fmt.Println(dbUpdate)
 		dbUpdateBuffer.WriteString(fmt.Sprintf("(%d, %q, %f, %f, %q),",
 			dbUpdate.timestampms,
 			dbUpdate.side,
-			dbUpdate.delta,
 			dbUpdate.price,
+			dbUpdate.remaining,
 			dbUpdate.reason))
 	}
 }
