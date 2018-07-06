@@ -21,6 +21,7 @@ conn = pymysql.connect(
 	db="inmensus_trading_db_1")
 cur = conn.cursor()
 
+cur.execute("delete from gemini_change;")
 cur.execute("show columns from gemini_change;")
 for r in cur:
     print(r)

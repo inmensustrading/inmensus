@@ -88,7 +88,11 @@ func OnModuleStart() {
 	}
 	addParams = strings.TrimSuffix(addParams, "&")
 	c, _, err := websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
-	rain.CheckError(err)
+	for err != nil {
+		fmt.Println(err)
+		time.Sleep(time.Second)
+		c, _, err = websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
+	}
 	defer c.Close()
 
 	done := make(chan struct{})
@@ -99,9 +103,21 @@ func OnModuleStart() {
 		for {
 			//I think this blocks
 			_, message, err := c.ReadMessage()
-			rain.CheckError(err)
 
-			onWSMessage(message)
+			//TODO: check connection again
+			if err != nil {
+				fmt.Println(err)
+				fmt.Println("Retrying connection...")
+
+				c, _, err = websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
+				for err != nil {
+					fmt.Println(err)
+					time.Sleep(time.Second)
+					c, _, err = websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
+				}
+			} else {
+				onWSMessage(message)
+			}
 		}
 	}()
 
