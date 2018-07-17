@@ -1,0 +1,1 @@
+start mysqlsh --sql --dbuser=GILGAMESH --host=inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com --password=3Dd7tAN66wqbjDaD --database=inmensus_trading_db_1

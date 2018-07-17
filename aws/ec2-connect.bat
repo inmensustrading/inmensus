@@ -1,0 +1,1 @@
+ssh -i "inmensus-trading-ec2-2.pem" ubuntu@ec2-18-222-171-61.us-east-2.compute.amazonaws.com
