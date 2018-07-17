@@ -13,7 +13,6 @@ def toRelPath(origPath):
 
 import pymysql
 import json
-import numpy
 
 DB_TABLE = "gemini_monitor"
 
@@ -28,19 +27,31 @@ cur.execute("SHOW columns FROM " + DB_TABLE + ";")
 print("Columns:", cur.fetchall())
 
 cur.execute("SELECT count(*) FROM " + DB_TABLE + ";")
-print("Size:", cur.fetchall())
+rows = cur.fetchall()[0][0]
+print("Size:", rows)
 
-cur.execute("SELECT * FROM " + DB_TABLE + " WHERE reason = 'connect';")
-print(cur.fetchall())
+fetchDB = input("(y/n) Fetch full database?")
+if fetchDB == "y":
+	#get all data
+	with open(toRelPath("db.json"), "w") as outfile:
+		outfile.write("[")
+		for a in range(0, rows, 1000):
+			print("Fetching 1000 rows with offset", a)
+			cur.execute("SELECT * FROM " + DB_TABLE + " LIMIT 1000 OFFSET " + str(a) + ";")
+			data = cur.fetchall()
 
-#cur.execute("DELETE FROM gemini_change;")
-
-input("Enter to fetch full database...")
-
-#get all data
-cur.execute("SELECT * FROM " + DB_TABLE + ";")
-with open(toRelPath("db.json"), "w") as outfile:
-    json.dump(cur.fetchall(), outfile)
+			for b in range(len(data)):
+				outfile.write("[" + str(data[b][0]) + "," + 
+					str(data[b][1]) + "," + 
+					str(data[b][2][0]) + "," + 
+					str(data[b][3]) + "," + 
+					str(data[b][4]) + "," + 
+					str(data[b][5]) + "]")
+				if b != len(data) - 1:
+					outfile.write(",")
+			if rows - a > 1000:
+				outfile.write(",")
+		outfile.write("]")
 
 cur.close()
 conn.close()

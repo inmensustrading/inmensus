@@ -243,7 +243,7 @@ func onUpdateDB() {
 
 	queryPart[len(queryPart)-1] = ';'
 	query := "INSERT INTO " + config.ChangeEventsTable + " VALUES " + string(queryPart)
-	fmt.Printf("Updating DB with %d bytes...\r", len(query))
+	fmt.Printf(time.Now().Format(time.RFC3339)+": Updating DB with %d bytes...\r", len(query))
 	dbUpdateBuffer.Reset()
 
 	_, _, err := db.Query(query)
