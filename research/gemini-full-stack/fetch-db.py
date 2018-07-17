@@ -15,6 +15,8 @@ import pymysql
 import json
 import numpy
 
+DB_TABLE = "gemini_monitor"
+
 conn = pymysql.connect(
 	host="inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com",
 	user="GILGAMESH",
@@ -22,13 +24,13 @@ conn = pymysql.connect(
 	db="inmensus_trading_db_1")
 cur = conn.cursor()
 
-cur.execute("SHOW columns FROM gemini_change;")
+cur.execute("SHOW columns FROM " + DB_TABLE + ";")
 print("Columns:", cur.fetchall())
 
-cur.execute("SELECT count(*) FROM gemini_change;")
+cur.execute("SELECT count(*) FROM " + DB_TABLE + ";")
 print("Size:", cur.fetchall())
 
-cur.execute("SELECT * FROM gemini_change WHERE reason = 'connect';")
+cur.execute("SELECT * FROM " + DB_TABLE + " WHERE reason = 'connect';")
 print(cur.fetchall())
 
 #cur.execute("DELETE FROM gemini_change;")
@@ -36,7 +38,7 @@ print(cur.fetchall())
 input("Enter to fetch full database...")
 
 #get all data
-cur.execute("SELECT * FROM gemini_change;")
+cur.execute("SELECT * FROM " + DB_TABLE + ";")
 with open(toRelPath("db.json"), "w") as outfile:
     json.dump(cur.fetchall(), outfile)
 

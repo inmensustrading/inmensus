@@ -25,7 +25,6 @@ type configType struct {
 	WebsocketParams   []string
 	DBUpdateMS        int
 	ConnectRetryMS    int
-	CheckpointSaveMS  int
 	MySQLEndpoint     string
 	MySQLIP           string
 	MySQLUsername     string
@@ -35,19 +34,35 @@ type configType struct {
 }
 
 type dbRowType struct {
-	timestampms int64
-	side        string
-	price       float64
-	remaining   float64
-	reason      string
+	time int64
+	side uint8
+	/*
+		0: bid
+		1: ask
+	*/
+	price     float64
+	remaining float64
+	reason    uint8
+	/*
+		0: connect
+		1: disconnect
+		2: place
+		3: trade
+		4: cancel
+		5: initial
+	*/
 }
 
+var eventID int64
 var config configType
 var db mysql.Conn
 var dbUpdateBuffer bytes.Buffer
 
 //OnModuleStart external calling designation
 func OnModuleStart() {
+	//unset flag to terminate connection peacefully
+	var programRunning = true
+
 	//init
 	fmt.Println("Starting...")
 	fmt.Println("Gemini Monitor.")
@@ -70,12 +85,12 @@ func OnModuleStart() {
 		panic(err)
 	}
 
-	rows, _ /*res*/, err := db.Query("show columns from " + config.ChangeEventsTable)
+	rows, _ /*res*/, err := db.Query("SHOW columns FROM " + config.ChangeEventsTable + ";")
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Database table columns:")
+	fmt.Println("Database columns:")
 	for _, row := range rows {
 		for a := 0; a < len(row); a++ {
 			fmt.Print(row.Str(a) + " | ")
@@ -89,17 +104,16 @@ func OnModuleStart() {
 		addParams += elem + "&"
 	}
 	addParams = strings.TrimSuffix(addParams, "&")
+	websocketEndpoint := config.WebsocketURL + "btcusd" + addParams
 
-	c := connectWebsocket(config.WebsocketURL + "btcusd" + addParams)
+	c := connectWebsocket(websocketEndpoint)
 
-	defer c.Close()
-
-	//TODO: figure out what this line does
-	done := make(chan struct{})
-
+	//set true if message handler loop is exited
+	hMessageDone := make(chan bool)
 	//message handling from websocket
 	go func() {
-		defer close(done)
+		fmt.Println("Message handling initiated.")
+
 		for {
 			//blocks
 			_, message, err := c.ReadMessage()
@@ -107,26 +121,49 @@ func OnModuleStart() {
 			//TODO: check connection again
 			if err != nil {
 				fmt.Println("Connection lost: ", err)
-				c = connectWebsocket(config.WebsocketURL + "btcusd" + addParams)
+
+				//post an event to the DB for disconnect
+				query := fmt.Sprintf(
+					"INSERT INTO "+config.ChangeEventsTable+" VALUES (%d, %d, %d, %f, %f, %d);",
+					eventID,
+					time.Now().UnixNano()/int64(time.Millisecond),
+					0,
+					0.0,
+					0.0,
+					1) //reason is disconnect
+				fmt.Println(query)
+				_, _, err = db.Query(query)
+				if err != nil {
+					fmt.Println("Error while querying DB for connect event:", err)
+				}
+				eventID++
+
+				if programRunning {
+					c = connectWebsocket(websocketEndpoint)
+				} else {
+					//if the flag is unset, then the user has manually terminated the program
+					break
+				}
 			} else {
 				onWSMessage(message)
 			}
 		}
+
+		fmt.Println("Message handling terminated.")
+		hMessageDone <- true
 	}()
 
+	//set true if message handler loop is exited
+	hUpdateDBDone := make(chan bool)
 	//setup separate timer thread
-	ticker := time.NewTicker(time.Duration(config.DBUpdateMS) * time.Millisecond)
-	tickerQuit := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				onUpdateDB()
-			case <-tickerQuit:
-				ticker.Stop()
-				return
-			}
+		fmt.Println("DB updates initiated.")
+		for programRunning {
+			onUpdateDB()
+			time.Sleep(time.Duration(config.DBUpdateMS) * time.Millisecond)
 		}
+		fmt.Println("DB updates terminated.")
+		hUpdateDBDone <- true
 	}()
 
 	//setup command loop to exit on 'exit'
@@ -138,15 +175,24 @@ func OnModuleStart() {
 		text = strings.TrimSpace(text)
 
 		if text == "exit" {
+			fmt.Println("Exiting...")
+
+			//set flag that we don't want to reconnect
+			programRunning = false
+
 			//cleanly exit monitoring
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-
 			if err != nil {
 				fmt.Println(err)
 			}
 
-			//TODO: wait for connection to close here
+			//manually close connection here
+			c.Close()
 
+			//wait for message handling function to respond and exit
+			<-hMessageDone
+
+			<-hUpdateDBDone
 			break
 		} else if text == "help" {
 			fmt.Println("Available commands: 'exit', 'test-event', 'count'.")
@@ -156,7 +202,7 @@ func OnModuleStart() {
 	}
 
 	//conclude
-	fmt.Println("Exiting...")
+	fmt.Println("Program termianted.")
 }
 
 func connectWebsocket(address string) *websocket.Conn {
@@ -169,12 +215,20 @@ func connectWebsocket(address string) *websocket.Conn {
 	}
 
 	//everytime we connect, update the db with a reconnect message
-	query := fmt.Sprintf("INSERT INTO "+config.ChangeEventsTable+" VALUES (%d, \"\", 0, 0, \"connect\");", time.Now().UnixNano()/int64(time.Millisecond))
+	query := fmt.Sprintf(
+		"INSERT INTO "+config.ChangeEventsTable+" VALUES (%d, %d, %d, %f, %f, %d);",
+		eventID,
+		time.Now().UnixNano()/int64(time.Millisecond),
+		0,
+		0.0,
+		0.0,
+		0) //reason is connect
 	fmt.Println(query)
 	_, _, err = db.Query(query)
 	if err != nil {
-		fmt.Println("Error while querying DB for reconnect event:", err)
+		fmt.Println("Error while querying DB for connect event:", err)
 	}
+	eventID++
 
 	fmt.Println("Websocket connected.")
 	return c
@@ -182,14 +236,14 @@ func connectWebsocket(address string) *websocket.Conn {
 
 func onUpdateDB() {
 	//update db
-	queryPart := dbUpdateBuffer.Bytes()
 	if dbUpdateBuffer.Len() == 0 {
 		return
 	}
+	queryPart := dbUpdateBuffer.Bytes()
 
 	queryPart[len(queryPart)-1] = ';'
 	query := "INSERT INTO " + config.ChangeEventsTable + " VALUES " + string(queryPart)
-	fmt.Printf("Updating DB with %d bytes...\n", len(query))
+	fmt.Printf("Updating DB with %d bytes...\r", len(query))
 	dbUpdateBuffer.Reset()
 
 	_, _, err := db.Query(query)
@@ -199,10 +253,9 @@ func onUpdateDB() {
 }
 
 func onWSMessage(message []byte) {
-	//fmt.Println(string(message[:]))
-
 	var response map[string]interface{}
-	if err := json.Unmarshal(message, &response); err != nil {
+	err := json.Unmarshal(message, &response)
+	if err != nil {
 		fmt.Println("Error while unmarshalling message:", err)
 		return
 	}
@@ -216,9 +269,9 @@ func onWSMessage(message []byte) {
 	if response["timestampms"] == nil {
 		//probably initial event
 		//set timestamp to be current time
-		dbUpdate.timestampms = time.Now().UnixNano() / int64(time.Millisecond)
+		dbUpdate.time = time.Now().UnixNano() / int64(time.Millisecond)
 	} else {
-		dbUpdate.timestampms = int64(response["timestampms"].(float64))
+		dbUpdate.time = int64(response["timestampms"].(float64))
 	}
 
 	events := response["events"].([]interface{})
@@ -228,16 +281,49 @@ func onWSMessage(message []byte) {
 			continue
 		}
 
-		dbUpdate.side = cur["side"].(string)
-		dbUpdate.price, _ = strconv.ParseFloat(cur["price"].(string), 64)
-		dbUpdate.remaining, _ = strconv.ParseFloat(cur["remaining"].(string), 64)
-		dbUpdate.reason = cur["reason"].(string)
+		side := cur["side"].(string)
+		if side == "bid" {
+			dbUpdate.side = 0
+		} else if side == "ask" {
+			dbUpdate.side = 1
+		} else {
+			fmt.Println("Unexpected \"side\" value:", side)
+			continue
+		}
 
-		dbUpdateBuffer.WriteString(fmt.Sprintf("(%d, %q, %f, %f, %q),",
-			dbUpdate.timestampms,
+		dbUpdate.price, err = strconv.ParseFloat(cur["price"].(string), 64)
+		if err != nil {
+			fmt.Println("Unexpected \"price\" value:", cur["price"].(string))
+			continue
+		}
+
+		dbUpdate.remaining, err = strconv.ParseFloat(cur["remaining"].(string), 64)
+		if err != nil {
+			fmt.Println("Unexpected \"remaining\" value:", cur["remaining"].(string))
+			continue
+		}
+
+		reason := cur["reason"].(string)
+		if reason == "place" {
+			dbUpdate.reason = 2
+		} else if reason == "trade" {
+			dbUpdate.reason = 3
+		} else if reason == "cancel" {
+			dbUpdate.reason = 4
+		} else if reason == "initial" {
+			dbUpdate.reason = 5
+		} else {
+			fmt.Println("Unexpected \"reason\" value:", reason)
+			continue
+		}
+
+		dbUpdateBuffer.WriteString(fmt.Sprintf("(%d, %d, %d, %f, %f, %d),",
+			eventID,
+			dbUpdate.time,
 			dbUpdate.side,
 			dbUpdate.price,
 			dbUpdate.remaining,
 			dbUpdate.reason))
+		eventID++
 	}
 }
