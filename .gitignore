@@ -3,4 +3,4 @@
 *.exe
 *.obj
 
-research/gemini-full-stack/assets/fetch-mysql.json
+research/gemini-full-stack/db.json
