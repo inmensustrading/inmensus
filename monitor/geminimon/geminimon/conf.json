@@ -8,7 +8,9 @@
 			"trades=false",
 			"auctions=false"
 		],
-	"TimerMS":				5000,
+	"DBUpdateMS":			10000,
+	"ConnectRetryMS":		30000,
+	"CheckpointSaveMS":		86400000,	
 	"MySQLEndpoint":				"inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com",
 	"MySQLIP":				"18.191.128.157",
 	"MySQLUsername":		"GILGAMESH",

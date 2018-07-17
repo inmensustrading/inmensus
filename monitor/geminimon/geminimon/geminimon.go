@@ -23,7 +23,9 @@ import (
 type configType struct {
 	WebsocketURL      string
 	WebsocketParams   []string
-	TimerMS           int
+	DBUpdateMS        int
+	ConnectRetryMS    int
+	CheckpointSaveMS  int
 	MySQLEndpoint     string
 	MySQLIP           string
 	MySQLUsername     string
@@ -87,34 +89,25 @@ func OnModuleStart() {
 		addParams += elem + "&"
 	}
 	addParams = strings.TrimSuffix(addParams, "&")
-	c, _, err := websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
-	for err != nil {
-		fmt.Println(err)
-		time.Sleep(time.Second)
-		c, _, err = websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
-	}
+
+	c := connectWebsocket(config.WebsocketURL + "btcusd" + addParams)
+
 	defer c.Close()
 
+	//TODO: figure out what this line does
 	done := make(chan struct{})
 
 	//message handling from websocket
 	go func() {
 		defer close(done)
 		for {
-			//I think this blocks
+			//blocks
 			_, message, err := c.ReadMessage()
 
 			//TODO: check connection again
 			if err != nil {
-				fmt.Println(err)
-				fmt.Println("Retrying connection...")
-
-				c, _, err = websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
-				for err != nil {
-					fmt.Println(err)
-					time.Sleep(time.Second)
-					c, _, err = websocket.DefaultDialer.Dial(config.WebsocketURL+"btcusd"+addParams, nil)
-				}
+				fmt.Println("Connection lost: ", err)
+				c = connectWebsocket(config.WebsocketURL + "btcusd" + addParams)
 			} else {
 				onWSMessage(message)
 			}
@@ -122,13 +115,13 @@ func OnModuleStart() {
 	}()
 
 	//setup separate timer thread
-	ticker := time.NewTicker(time.Duration(config.TimerMS) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(config.DBUpdateMS) * time.Millisecond)
 	tickerQuit := make(chan struct{})
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				onTimerCall()
+				onUpdateDB()
 			case <-tickerQuit:
 				ticker.Stop()
 				return
@@ -139,7 +132,7 @@ func OnModuleStart() {
 	//setup command loop to exit on 'exit'
 	reader := bufio.NewReader(os.Stdin)
 	for true {
-		fmt.Print("Enter command: ")
+		fmt.Println("Accepting commands...")
 		text, err := reader.ReadString('\n')
 		rain.CheckError(err)
 		text = strings.TrimSpace(text)
@@ -147,7 +140,13 @@ func OnModuleStart() {
 		if text == "exit" {
 			//cleanly exit monitoring
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			rain.CheckError(err)
+
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			//TODO: wait for connection to close here
+
 			break
 		} else if text == "help" {
 			fmt.Println("Available commands: 'exit', 'test-event', 'count'.")
@@ -158,30 +157,44 @@ func OnModuleStart() {
 
 	//conclude
 	fmt.Println("Exiting...")
-
-	//wait for websocket to end
-	//TODO: make this better
-	time.Sleep(time.Second)
 }
 
-func onTimerCall() {
+func connectWebsocket(address string) *websocket.Conn {
+	fmt.Println("Connecting to websocket endpoint...")
+
+	c, _, err := websocket.DefaultDialer.Dial(address, nil)
+	for err != nil {
+		time.Sleep(time.Duration(config.ConnectRetryMS) * time.Millisecond)
+		c, _, err = websocket.DefaultDialer.Dial(address, nil)
+	}
+
+	//everytime we connect, update the db with a reconnect message
+	query := fmt.Sprintf("INSERT INTO "+config.ChangeEventsTable+" VALUES (%d, \"\", 0, 0, \"connect\");", time.Now().UnixNano()/int64(time.Millisecond))
+	fmt.Println(query)
+	_, _, err = db.Query(query)
+	if err != nil {
+		fmt.Println("Error while querying DB for reconnect event:", err)
+	}
+
+	fmt.Println("Websocket connected.")
+	return c
+}
+
+func onUpdateDB() {
 	//update db
 	queryPart := dbUpdateBuffer.Bytes()
 	if dbUpdateBuffer.Len() == 0 {
-		//fmt.Println("no updates")
-		//fmt.Println()
 		return
 	}
 
 	queryPart[len(queryPart)-1] = ';'
-	query := "insert into " + config.ChangeEventsTable + " values " + string(queryPart)
-	//fmt.Println(query)
-	//fmt.Println()
+	query := "INSERT INTO " + config.ChangeEventsTable + " VALUES " + string(queryPart)
+	fmt.Printf("Updating DB with %d bytes...\n", len(query))
 	dbUpdateBuffer.Reset()
 
 	_, _, err := db.Query(query)
 	if err != nil {
-		panic(err)
+		fmt.Println("Error while querying DB:", err)
 	}
 }
 
@@ -190,11 +203,12 @@ func onWSMessage(message []byte) {
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(message, &response); err != nil {
-		panic(err)
+		fmt.Println("Error while unmarshalling message:", err)
+		return
 	}
 
 	if response["type"].(string) != "update" {
-		fmt.Println("not update type")
+		fmt.Println("Not update type.")
 		return
 	}
 
@@ -219,7 +233,6 @@ func onWSMessage(message []byte) {
 		dbUpdate.remaining, _ = strconv.ParseFloat(cur["remaining"].(string), 64)
 		dbUpdate.reason = cur["reason"].(string)
 
-		//fmt.Println(dbUpdate)
 		dbUpdateBuffer.WriteString(fmt.Sprintf("(%d, %q, %f, %f, %q),",
 			dbUpdate.timestampms,
 			dbUpdate.side,

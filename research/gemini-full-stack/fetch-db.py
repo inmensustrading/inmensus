@@ -21,18 +21,29 @@ conn = pymysql.connect(
 	db="inmensus_trading_db_1")
 cur = conn.cursor()
 
-cur.execute("show columns from gemini_change;")
+print("Columns:")
+cur.execute("SHOW columns FROM gemini_change;")
 for r in cur:
     print(r)
-cur.execute("select count(*) from gemini_change;")
+cur.execute("SELECT count(*) FROM gemini_change;")
 print("Size: ", end="")
 for r in cur:
     print(r)
-input("Enter to continue fetching...")
+
+clearDB = input("Reset database? (y/n): ")
+if clearDB == "y":
+	cur.execute("DELETE FROM gemini_change;")
+
+	cur.execute("SELECT count(*) FROM gemini_change;")
+	print("Size: ", end="")
+	for r in cur:
+		print(r)
+
+input("Enter to fetch full database...")
 
 #get all data
-cur.execute("select * from gemini_change;")
-with open(toRelPath("assets\\fetch-mysql.json"), "w") as outfile:
+cur.execute("SELECT * FROM gemini_change LIMIT 10;")
+with open(toRelPath("db.json"), "w") as outfile:
     json.dump(cur.fetchall(), outfile)
 
 cur.close()
