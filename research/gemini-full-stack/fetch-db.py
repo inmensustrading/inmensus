@@ -30,7 +30,7 @@ cur.execute("SELECT count(*) FROM " + DB_TABLE + ";")
 rows = cur.fetchall()[0][0]
 print("Size:", rows)
 
-fetchDB = input("(y/n) Fetch full database?")
+fetchDB = input("(y/n) Fetch full database? ")
 if fetchDB == "y":
 	#get all data
 	with open(toRelPath("db.json"), "w") as outfile:
