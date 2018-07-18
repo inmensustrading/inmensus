@@ -8,12 +8,15 @@
 			"trades=false",
 			"auctions=false"
 		],
-	"DBUpdateMS":			15000,
+	"ChangeDBUpdateMS":		15000,
+	"CheckpointDBUpdateMS":	43200000,
 	"ConnectRetryMS":		30000,
 	"MySQLEndpoint":				"inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com",
 	"MySQLIP":				"18.191.128.157",
 	"MySQLUsername":		"GILGAMESH",
 	"MySQLPassword":		"3Dd7tAN66wqbjDaD",
 	"DatabaseName":			"inmensus_trading_db_1",
-	"ChangeEventsTable":	"gemini_monitor"
+	"ChangeEventsTable":	"gemini_events_btcusd",
+	"CheckpointsTable":		"gemini_checkpoints_btcusd",
+	"CkpTimesTable":		"gemini_checkpoint_times_btcusd"
 }

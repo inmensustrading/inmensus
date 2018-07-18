@@ -5,4 +5,4 @@
 *.exe
 *.obj
 
-research/gemini-full-stack/db.json
+research/gemini-full-stack/data
