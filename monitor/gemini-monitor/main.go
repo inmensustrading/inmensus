@@ -54,11 +54,6 @@ type changeDBRowType struct {
 	*/
 }
 
-type checkpointDBRowType struct {
-	time       int64
-	checkpoint string
-}
-
 var config configType
 var changeDBBuffer bytes.Buffer
 
