@@ -30,14 +30,15 @@ cur.execute("SELECT count(*) FROM " + DB_TABLE + ";")
 rows = cur.fetchall()[0][0]
 print("Size:", rows)
 
+ROWS = 50000
 fetchDB = input("(y/n) Fetch full database? ")
 if fetchDB == "y":
 	#get all data
 	with open(toRelPath("db.json"), "w") as outfile:
 		outfile.write("[")
-		for a in range(0, rows, 1000):
-			print("Fetching 1000 rows with offset", a)
-			cur.execute("SELECT * FROM " + DB_TABLE + " LIMIT 1000 OFFSET " + str(a) + ";")
+		for a in range(0, rows, ROWS):
+			print("Fetching", ROWS, "rows with offset", a)
+			cur.execute("SELECT * FROM " + DB_TABLE + " LIMIT " + str(ROWS) + " OFFSET " + str(a) + ";")
 			data = cur.fetchall()
 
 			for b in range(len(data)):
@@ -49,7 +50,7 @@ if fetchDB == "y":
 					str(data[b][5]) + "]")
 				if b != len(data) - 1:
 					outfile.write(",")
-			if rows - a > 1000:
+			if rows - a > ROWS:
 				outfile.write(",")
 		outfile.write("]")
 
