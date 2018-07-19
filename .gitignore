@@ -1,6 +1,7 @@
 **/.vs
 **/.vscode
 **/.ipynb_checkpoints
+**/__pycache__
 
 *.exe
 *.obj

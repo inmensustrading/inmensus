@@ -1,35 +1,9 @@
-import os
-import psutil
-
-def toRelPath(origPath):
-    """Converts path to path relative to current script
-
-    origPath:	path to convert
-    """
-    try:
-        if not hasattr(toRelPath, "__location__"):
-            toRelPath.__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-        return os.path.join(toRelPath.__location__, origPath)
-    except NameError:
-        return origPath
-    
-def getMBUsage():
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss / 1e6
-    
-#0: 1080Ti, 1: 940MX
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
-
-####end of library
-
-import json
 import pymysql
-import math
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import math
 
-def loadHistoricalStats(
+def sqlToDataframe(
     cacheLoc,
     useCache = False,
     metrics = [],
@@ -158,10 +132,10 @@ def loadHistoricalStats(
                     npMetrics[ts, cMetric] = (maxBid + minAsk) / 200
                     cMetric += 1
                 if "bid-volume" in metrics:
-                    npMetrics[ts, cMetric] = curOB[maxBid]
+                    npMetrics[ts, cMetric] = curOB[maxBid][0]
                     cMetric += 1
                 if "ask-volume" in metrics:
-                    npMetrics[ts, cMetric] = curOB[minAsk]
+                    npMetrics[ts, cMetric] = curOB[minAsk][1]
                     cMetric += 1
                 if "last-trade" in metrics:
                     npMetrics[ts, cMetric] = lastTrade
@@ -200,10 +174,3 @@ def loadHistoricalStats(
         df.to_csv(cacheLoc, index = False)
             
     return df
-
-df = loadHistoricalStats(toRelPath("data\\dataframe-cache.csv"), 
-	useCache = False,
-	metrics = ["time", "max-bid", "min-ask", "mid", "last-trade"],
-	sqlPassword = "3Dd7tAN66wqbjDaD")
-plt.plot(df.loc[:, "time"], df.loc[:, "mid"])
-plt.show()
