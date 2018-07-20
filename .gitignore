@@ -1,8 +1,8 @@
-*.vscode
-*.vs
+# directories
+**/.vscode
+**/.vs
 
-common/boost_1_67_0
-
-*.exe
-*.obj
-*.npy
+# files
+**/*.exe
+**/*.obj
+**/*.npy
