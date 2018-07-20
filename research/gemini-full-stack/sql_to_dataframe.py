@@ -115,7 +115,7 @@ def sqlToDataframe(
 	#walk through events
 	prevTimestep = firstTimestep
 	lastTrade = None
-	print("Processing", cEvents, "events in", math.ceil(cEvents // queryLimit), "parts...")
+	print("Processing", cEvents, "events in", math.ceil(cEvents / queryLimit), "parts...")
 	for a in range(0, cEvents, queryLimit):
 		cur.execute("SELECT * FROM " + eventsTable + 
 					" WHERE time >= " + str(ckpTime) + 
