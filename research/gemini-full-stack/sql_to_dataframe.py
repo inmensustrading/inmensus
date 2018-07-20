@@ -106,7 +106,7 @@ def sqlToDataframe(
 		
 	#progressively query events
 	cur.execute("SELECT COUNT(*) FROM " + eventsTable + 
-				" WHERE time >= " + str(startTime) + 
+				" WHERE time >= " + str(ckpTime) + 
 				" AND time < " + str(endTime) + 
 				" ORDER BY time ASC" + 
 				";")
@@ -118,7 +118,7 @@ def sqlToDataframe(
 	print("Processing", cEvents, "events in", math.ceil(cEvents // queryLimit), "parts...")
 	for a in range(0, cEvents, queryLimit):
 		cur.execute("SELECT * FROM " + eventsTable + 
-					" WHERE time >= " + str(startTime) + 
+					" WHERE time >= " + str(ckpTime) + 
 					" AND time <= " + str(endTime) + 
 					" ORDER BY time ASC" + 
 					" LIMIT " + str(queryLimit) + 
