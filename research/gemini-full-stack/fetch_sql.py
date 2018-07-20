@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import rain
 
 def main():
-	df = std.sqlToDataframe(rain.toRelPath("data\\dataframe-cache.csv"), 
-		useCache = False,
+	#small test
+
+	df = std.sqlToDataframe(
 		metrics = ["time", 
 			"max-bid", 
 			"min-ask", 

@@ -2,175 +2,199 @@ import pymysql
 import numpy as np
 import pandas as pd
 import math
+import functools
 
 def sqlToDataframe(
-    cacheLoc,
-    useCache = False,
-    metrics = [],
-    startTime = None,
-    endTime = None,
-    timestepSize = 500,
-    sqlHost = "inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com",
-    sqlUser = "GILGAMESH",
-    sqlPassword = None,
-    sqlDB = "inmensus_trading_db_1",
-    queryLimit = 50000,
-    maxPrice = 1000000
+	metrics = [],
+	startTime = None,
+	endTime = None,
+	timestepSize = 500,
+	sqlHost = "inmensus-trading-db-1.ce50oojfsygk.us-east-2.rds.amazonaws.com",
+	sqlUser = "GILGAMESH",
+	sqlPassword = None,
+	sqlDB = "inmensus_trading_db_1",
+	eventsTable = "gemini_events_btcusd",
+	checkpointsTable = "gemini_checkpoints_btcusd",
+	checkpointTimesTable = "gemini_checkpoint_times_btcusd",
+	queryLimit = 100000,
+	maxPrice = 1000000
 ):
-    """
-    metrics: a combination of the following:
-        "time"
-        "max-bid"
-        "min-ask"
-        "mid"
-        "bid-volume"
-        "ask-volume"
-        "last-trade"
-        "oir"
-    startTime: unix MS time
-    endTime: unix MS time
-    """
-    
-    EVENT_TBL = "gemini_events_btcusd"
-    CKP_TBL = "gemini_checkpoints_btcusd"
-    CKP_TIME_TBL = "gemini_checkpoint_times_btcusd"
-    
-    if useCache:
-        #load the dataframe from the csv cache
-        df = pd.read_csv(cacheLoc)
-    else:
-        print("Querying DB...")
-        conn = pymysql.connect(
-            host = sqlHost,
-            user = sqlUser,
-            passwd = sqlPassword,
-            db = sqlDB
-        )
-        cur = conn.cursor()
-        
-        #get row count in each table
-        dbTables = [EVENT_TBL, CKP_TBL, CKP_TIME_TBL]
-        tableRows = {}
-        for table in dbTables:
-            cur.execute("SELECT COUNT(*) FROM " + table + ";")
-            tableRows[table] = cur.fetchall()[0][0]
-        
-        if startTime == None:
-            cur.execute("SELECT * FROM " + CKP_TIME_TBL + " LIMIT 1;")
-            startTime = cur.fetchall()[0][0]
-        if endTime == None:
-            cur.execute("SELECT * FROM " + EVENT_TBL + " LIMIT 1 OFFSET " + str(tableRows[EVENT_TBL] - 1) + ";")
-            endTime = cur.fetchall()[0][0]
-            
-        cur.execute("SELECT * FROM " + EVENT_TBL + 
-                    " WHERE time >= " + str(startTime) + 
-                    " AND time <= " + str(endTime) + 
-                    " ORDER BY time ASC" + 
-                    ";")
-        events = cur.fetchall()
-        cur.execute("SELECT MAX(time) FROM " + CKP_TIME_TBL + 
-                    " WHERE time <= " + str(startTime) + 
-                    ";")
-        ckpTime = cur.fetchall()[0][0]
-        cur.execute("SELECT * FROM " + CKP_TBL + 
-                    " WHERE time = " + str(ckpTime) + 
-                    ";")
-        checkpoint = cur.fetchall()
-        
-        cur.close()
-        conn.close()
-        print("Finished querying DB.")
-        
-        #setup metrics
-        firstTimestep = math.ceil(ckpTime / timestepSize) * timestepSize
-        timesteps = math.floor((events[-1][0] - firstTimestep) / 500) + 1
-        npMetrics = np.zeros((timesteps, len(metrics)))
-        
-        #initialize from checkpoint
-        maxBid = 0
-        minAsk = 100 * maxPrice
-        curOB = np.zeros((math.ceil(maxPrice) * 100 + 1, 2))
-        for event in checkpoint:
-            curOB[int(round(event[2] * 100))][event[1]] = event[3]
-            if event[3] > 0:
-                if event[1] == 0:
-                    maxBid = max(maxBid, int(round(event[2] * 100)))
-                if event[1] == 1:
-                    minAsk = min(minAsk, int(round(event[2] * 100)))
-        
-        #walk through events
-        print(len(events), "events.")
-        prevTimestep = firstTimestep
-        lastTrade = None
-        for a in range(0, len(events)):
-            if a % 1000 == 0:
-                print("Processing events... {:4.2f}%".format(100 * (a + 1) / len(events)), end = "\r")
-            
-            event = events[a]
-            #only consider update events
-            if event[4] == 0 or event[4] == 1 or event[4] == 5:
-                continue
-                
-            if event[4] == 3:
-                lastTrade = event[2]
-                
-            #walk through missed timesteps
-            for prevTimestep in range(prevTimestep, event[0], timestepSize):
-                ts = (prevTimestep - firstTimestep) // timestepSize
-                #compute metrics
-                cMetric = 0
-                if "time" in metrics:
-                    npMetrics[ts, cMetric] = prevTimestep
-                    cMetric += 1
-                if "max-bid" in metrics:
-                    npMetrics[ts, cMetric] = maxBid / 100
-                    cMetric += 1
-                if "min-ask" in metrics:
-                    npMetrics[ts, cMetric] = minAsk / 100
-                    cMetric += 1
-                if "mid" in metrics:
-                    npMetrics[ts, cMetric] = (maxBid + minAsk) / 200
-                    cMetric += 1
-                if "bid-volume" in metrics:
-                    npMetrics[ts, cMetric] = curOB[maxBid][0]
-                    cMetric += 1
-                if "ask-volume" in metrics:
-                    npMetrics[ts, cMetric] = curOB[minAsk][1]
-                    cMetric += 1
-                if "last-trade" in metrics:
-                    npMetrics[ts, cMetric] = lastTrade
-                    cMetric += 1
-                if "oir" in metrics:
-                    npMetrics[ts, cMetric] = None
-                    cMetric += 1
-                
-            #update ob
-            pp = int(round(event[2] * 100))
-            if event[1] == 1: #ask
-                if event[3] > 0:
-                    minAsk = min(minAsk, pp)
-                else:
-                    for minAsk in range(minAsk + 1, maxPrice + 1):
-                        if curOB[minAsk][1] > 0:
-                            break
-            else: #bid
-                if event[3] > 0:
-                    maxBid = max(maxBid, pp)
-                else:
-                    for maxBid in range(maxBid, -1, -1):
-                        if curOB[maxBid][0] > 0:
-                            break
-            curOB[pp][event[1]] = event[3]
-        print("Done.")
-        del checkpoint
-        del events
-        del curOB
-        
-        #convert to dataframe
-        df = pd.DataFrame(npMetrics, columns = metrics)
-        del npMetrics
-        
-        #write to csv cache
-        df.to_csv(cacheLoc, index = False)
-            
-    return df
+	"""
+	metrics: a combination of the following:
+		"time"
+		"max-bid"
+		"min-ask"
+		"mid"
+		"bid-volume"
+		"ask-volume"
+		"last-trade"
+		"oir" - not yet implemented
+	startTime: unix ms time; select -X to query the most recent X ms; DF will start at the first time divisible by timestepSize including or after startTime
+	endTime: unix ms time; DF will end at the last time divisible by timestepSize before endTime
+	queryLimit: max rows for a single query to the events table; to lessen load on memory and network
+	"""
+	
+	conn = pymysql.connect(
+		host = sqlHost,
+		user = sqlUser,
+		passwd = sqlPassword,
+		db = sqlDB
+	)
+	cur = conn.cursor()
+	
+	#get row count in each table
+	dbTables = [eventsTable, checkpointsTable, checkpointTimesTable]
+	tableRows = {}
+	for table in dbTables:
+		cur.execute("SELECT COUNT(*) FROM " + table + ";")
+		tableRows[table] = cur.fetchall()[0][0]
+	
+	if endTime == None:
+		cur.execute("SELECT * FROM " + eventsTable + " LIMIT 1 OFFSET " + str(tableRows[eventsTable] - 1) + ";")
+		endTime = cur.fetchall()[0][0]
+	if startTime == None:
+		cur.execute("SELECT * FROM " + checkpointTimesTable + " LIMIT 1;")
+		startTime = cur.fetchall()[0][0]
+	#we can query recent event segments too
+	elif startTime < 0 and endTime != None:
+		startTime += endTime
+	print("Perparing to process from times", startTime, "to", str(endTime) + "... ")
+	
+	#setup metrics
+	firstTimestep = math.ceil(startTime / timestepSize) * timestepSize
+	timesteps = math.floor((endTime - firstTimestep) / timestepSize) + 1
+	npMetrics = np.zeros((timesteps, len(metrics)))
+
+	#metrics implemented as callbacks during event processing
+	metricCallbacks = []
+	cMetric = 1
+	if "time" in metrics:
+		metricCallbacks.append(
+			lambda ts: npMetrics[ts, cMetric] = prevTimestep
+		)
+		cMetric += 1
+
+	#setup initial checkpoint
+	cur.execute("SELECT MAX(time) FROM " + checkpointTimesTable + 
+				" WHERE time <= " + str(startTime) + 
+				";")
+	ckpTime = cur.fetchall()[0][0]
+	cur.execute("SELECT * FROM " + checkpointsTable + 
+				" WHERE time = " + str(ckpTime) + 
+				";")
+	checkpoint = cur.fetchall()
+	print("Initializing from checkpoint at time", str(ckpTime) + "...")
+
+	#process orderbook from checkpoint
+	maxBid = 0
+	minAsk = 100 * maxPrice
+	curOB = np.zeros((math.ceil(maxPrice) * 100 + 1, 2))
+	for event in checkpoint:
+		curOB[int(round(event[2] * 100))][event[1]] = event[3]
+		if event[3] > 0:
+			if event[1] == 0:
+				maxBid = max(maxBid, int(round(event[2] * 100)))
+			if event[1] == 1:
+				minAsk = min(minAsk, int(round(event[2] * 100)))
+		
+	#progressively query events
+	cur.execute("SELECT COUNT(*) FROM " + eventsTable + 
+				" WHERE time >= " + str(startTime) + 
+				" AND time < " + str(endTime) + 
+				" ORDER BY time ASC" + 
+				";")
+	cEvents = cur.fetchall()[0][0]
+
+	#walk through events
+	prevTimestep = firstTimestep
+	lastTrade = None
+	print("Processing", cEvents, "events in", math.ceil(cEvents // queryLimit), "parts...")
+	for a in range(0, cEvents, queryLimit):
+		cur.execute("SELECT * FROM " + eventsTable + 
+					" WHERE time >= " + str(startTime) + 
+					" AND time <= " + str(endTime) + 
+					" ORDER BY time ASC" + 
+					" LIMIT " + str(queryLimit) + 
+					" OFFSET " + str(a) + 
+					";")
+		events = cur.fetchall()
+	
+		#walk through events
+		for b in range(0, len(events)):
+			event = events[b]
+
+			#progress
+			if b % 10000 == 0:
+				print("{:4.2f}%".format(100 * (a + b) / cEvents), end = "\r")
+
+			#only consider update events
+			if event[4] == 0 or event[4] == 1 or event[4] == 5:
+				continue
+				
+			#walk through missed timesteps
+			for prevTimestep in range(prevTimestep, event[0], timestepSize):
+				ts = (prevTimestep - firstTimestep) // timestepSize
+				#compute metrics
+				cMetric = 0
+				if "time" in metrics:
+					npMetrics[ts, cMetric] = prevTimestep
+					cMetric += 1
+				if "max-bid" in metrics:
+					npMetrics[ts, cMetric] = maxBid / 100
+					cMetric += 1
+				if "min-ask" in metrics:
+					npMetrics[ts, cMetric] = minAsk / 100
+					cMetric += 1
+				if "mid" in metrics:
+					npMetrics[ts, cMetric] = (maxBid + minAsk) / 200
+					cMetric += 1
+				if "bid-volume" in metrics:
+					npMetrics[ts, cMetric] = curOB[maxBid][0]
+					cMetric += 1
+				if "ask-volume" in metrics:
+					npMetrics[ts, cMetric] = curOB[minAsk][1]
+					cMetric += 1
+				if "last-trade" in metrics:
+					npMetrics[ts, cMetric] = lastTrade
+					cMetric += 1
+				if "oir" in metrics:
+					npMetrics[ts, cMetric] = None
+					cMetric += 1
+				
+			#keep track of last trade
+			if event[4] == 3:
+				lastTrade = event[2]
+
+			#update ob
+			pp = int(round(event[2] * 100))
+			if event[1] == 1: #ask
+				if event[3] > 0:
+					minAsk = min(minAsk, pp)
+				else:
+					for minAsk in range(minAsk + 1, maxPrice + 1):
+						if curOB[minAsk][1] > 0:
+							break
+			else: #bid
+				if event[3] > 0:
+					maxBid = max(maxBid, pp)
+				else:
+					for maxBid in range(maxBid, -1, -1):
+						if curOB[maxBid][0] > 0:
+							break
+			curOB[pp][event[1]] = event[3]
+
+	cur.close()
+	conn.close()
+
+	print("100.00%")
+	
+	#convert to dataframe
+	df = pd.DataFrame(npMetrics, columns = metrics)
+			
+	return df
+
+#metric functions
+#takes arguments: the index of the metric, time, lastTrade, curOB, maxBid, minAsk
+#returns a tuple: metric index, value of computed metric
+def computeMetricTime(id, time, lastTrade, curOB, maxBid, minAsk):
+	
