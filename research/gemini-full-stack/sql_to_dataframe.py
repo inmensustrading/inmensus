@@ -143,7 +143,7 @@ def sqlToDataframe(
 				ts = (prevTimestep - firstTimestep) // timestepSize
 				#compute metrics
 				for cb in metricCallbacks:
-					cb((ts, lastTrade, curOB, maxBid, minAsk))
+					cb((ts, lastTrade, curOB, maxBid, minAsk, prevTimestep))
 				
 			#keep track of last trade
 			if event[4] == 3:
@@ -179,9 +179,9 @@ def sqlToDataframe(
 
 #metric functions
 #takes arguments: metric array, the index of the metric, status
-#status is a tuple: (time, lastTrade, curOB, maxBid, minAsk)
+#status is a tuple: (time, lastTrade, curOB, maxBid, minAsk, time)
 def computeMetricTime(npMetrics, id, status):
-	npMetrics[status[0], id] = status[0]
+	npMetrics[status[0], id] = status[5]
 
 def computeMetricMaxBid(npMetrics, id, status):
 	npMetrics[status[0], id] = status[3]
