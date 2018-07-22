@@ -16,6 +16,26 @@ def toRelPath(origPath):
 def getMBUsage():
     process = psutil.Process(os.getpid())
     return process.memory_info().rss / 1e6
+
+def portfolioToValue(portfolio, mid, fees):
+    midShift = mid.shift(-1)
+    rMid = midShift / mid
+    rValue = portfolio * rMid + (1 - portfolio)
+    trueValue = rValue.cumprod() * mid[0]
+    
+    dPortfolio = portfolio.shift(-1) - portfolio
+    #percentage fees incurred at each timestep
+    dRelValueFees = 1 - dPortfolio.abs() * fees
+    #value with fees relative to value without fees
+    relValueFees = dRelValueFees.cumprod()
+    return relValueFees * trueValue
+
+def computeMACD(series, fast, slow, signal):
+	emaFast = series.ewm(span = fast).mean()
+	emaSlow = series.ewm(span = slow).mean()
+	maDiff = emaFast - emaSlow
+	maSignal = maDiff.ewm(span = signal).mean()
+	return maDiff - maSignal, maDiff, maSignal, emaFast, emaSlow
     
 #0: 1080Ti, 1: 940MX
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
