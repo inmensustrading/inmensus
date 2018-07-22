@@ -17,6 +17,12 @@ def getMBUsage():
     process = psutil.Process(os.getpid())
     return process.memory_info().rss / 1e6
 
+def setCUDAVisible(devices):
+	"""
+	0: 1080Ti, 1: 940MX
+	"""
+	os.environ["CUDA_VISIBLE_DEVICES"] = devices
+
 def portfolioToValue(portfolio, mid, fees):
     midShift = mid.shift(-1)
     rMid = midShift / mid
@@ -37,5 +43,3 @@ def computeMACD(series, fast, slow, signal):
 	maSignal = maDiff.ewm(span = signal).mean()
 	return maDiff - maSignal, maDiff, maSignal, emaFast, emaSlow
     
-#0: 1080Ti, 1: 940MX
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
