@@ -8,17 +8,17 @@ import rain
 
 rain.setCUDAVisible("0, 1")
 
+MODEL_NAME = "0"
 DATA_CACHE = "data/df-cache.csv"
 FREQUENCY = 6
 TIMESTEP_LEN = 150
 VALIDATION_RATIO = 0.05
-MODEL_NAME = "0"
 EPOCHS = 8
 BATCH_SIZE = 256
 
 #model
 model = keras.models.Sequential()
-#50 timesteps of history - with a vector of size 1 per timestep
+#timesteps of history - with a vector of size 1 per timestep
 model.add(keras.layers.GRU(128, input_shape = (TIMESTEP_LEN, 1), return_sequences = True))
 model.add(keras.layers.BatchNormalization())
 model.add(keras.layers.Activation("tanh"))
@@ -29,7 +29,7 @@ model.add(keras.layers.Activation("tanh"))
 model.add(keras.layers.Dropout(0.2))
 model.add(keras.layers.Dense(1))
 model.add(keras.layers.Activation("linear"))
-model.compile(loss = "mean_squared_error", 
+model.compile(loss = "mean_squared_logarithmic_error", 
 	optimizer = keras.optimizers.adam(lr = 0.0003))
 
 #data
