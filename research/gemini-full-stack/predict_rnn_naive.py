@@ -28,7 +28,7 @@ model.add(keras.layers.Dense(1))
 model.add(keras.layers.Activation("linear"))
 model.compile(loss = "mean_squared_logarithmic_error", 
 	optimizer = keras.optimizers.adam(lr = 0.0003))
-model.load_weights(toRelPath("weights/0-1-56175437.7426.h5"))
+model.load_weights(rain.toRelPath("weights/0-1-49.8703.h5"))
 
 #data
 df = pd.read_csv(rain.toRelPath(DATA_CACHE))
@@ -42,14 +42,13 @@ plt.show()
 
 #predict from random place in the sequence
 start = np.random.randint(0, len(mid) // 2)
-pattern = mid[start:start + TIMESTEP_LEN].values.tolist
+pattern = mid[start:start + TIMESTEP_LEN].values.tolist()
 predictions = pattern
 for a in range(PREDICT_LEN):
-	predictions.append(model.predict(np.reshape(pattern, (1, TIMESTEP_LEN, 1)), 
-		verbose = 0))
-	
-	pattern.append(index)
-	pattern = pattern[1:]
+	predictions.append(model.predict(
+		np.reshape(pattern, (1, TIMESTEP_LEN, 1)), 
+		verbose = 0)[0][0])
+	pattern = predictions[-TIMESTEP_LEN:]
 
 print(predictions)
 plt.plot(predictions)

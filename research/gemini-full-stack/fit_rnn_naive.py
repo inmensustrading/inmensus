@@ -64,7 +64,7 @@ model.fit(
     batch_size = BATCH_SIZE, 
     callbacks = [
         keras.callbacks.ModelCheckpoint(
-            rain.toRelPath("weights/" + MODEL_NAME + "-{epoch}-{val_loss:.4f}.h5"), 
+            rain.toRelPath("weights/" + MODEL_NAME + "_{epoch}_{val_loss:.4f}.h5"), 
             save_weights_only = True
         )
     ],
