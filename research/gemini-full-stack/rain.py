@@ -1,5 +1,6 @@
 import os
 import psutil
+import pandas as pd
 
 def toRelPath(origPath):
     """Converts path to path relative to current script
@@ -43,3 +44,13 @@ def computeMACD(series, fast, slow, signal):
 	maSignal = maDiff.ewm(span = signal).mean()
 	return maDiff - maSignal, maDiff, maSignal, emaFast, emaSlow
     
+def computeOBV(series, volume):
+	obv = [0]
+	for a in range(1, len(series)):
+		if series[a] > series[a - 1]:
+			obv.append(obv[-1] + volume[a])
+		elif series[a] == series[a - 1]:
+			obv.append(obv[-1])
+		else:
+			obv.append(obv[-1] - volume[a])
+	return pd.Series(obv)

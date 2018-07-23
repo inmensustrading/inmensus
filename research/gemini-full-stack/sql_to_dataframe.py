@@ -20,15 +20,7 @@ def sqlToDataframe(
 	maxPrice = 1000000
 ):
 	"""
-	metrics: a combination of the following:
-		"time"
-		"max-bid"
-		"min-ask"
-		"mid"
-		"bid-volume"
-		"ask-volume"
-		"last-trade"
-		"oir"
+	metrics: see mcbDict
 	startTime: unix ms time; select -X to query the most recent X ms; DF will start at the first time divisible by timestepSize including or after startTime
 	endTime: unix ms time; DF will end at the last time divisible by timestepSize before endTime
 	queryLimit: max rows for a single query to the events table; to lessen load on memory and network
@@ -67,14 +59,14 @@ def sqlToDataframe(
 
 	#metrics implemented as callbacks during event processing
 	mcbDict = {
-		"time":		computeMetricTime,
-		"max-bid":	computeMetricMaxBid, 
-		"min-ask":	computeMetricMinAsk, 
-		"mid":	computeMetricMid, 
+		"time":			computeMetricTime,
+		"max-bid":		computeMetricMaxBid, 
+		"min-ask":		computeMetricMinAsk, 
+		"mid":			computeMetricMid, 
 		"bid-volume":	computeMetricBidVolume, 
 		"ask-volume":	computeMetricAskVolume, 
-		"last-trade":	computeMetricLastTrade, 
-		"oir":	computeMetricOIR
+		"last-trade":	computeMetricLastTrade,
+		"volume":		computeMetricVolume
 	}
 	metricCallbacks = []
 	for a in range(len(metrics)):
@@ -93,10 +85,13 @@ def sqlToDataframe(
 	print("Initializing from checkpoint at time", str(ckpTime) + "...")
 
 	#process orderbook from checkpoint
+	lastTrade = None
+	volume = 0
 	maxBid = 0
 	minAsk = 100 * maxPrice
 	curOB = np.zeros((math.ceil(maxPrice) * 100 + 1, 2))
 	for event in checkpoint:
+		volume += event[3] - curOB[int(round(event[2] * 100))][event[1]]
 		curOB[int(round(event[2] * 100))][event[1]] = event[3]
 		if event[3] > 0:
 			if event[1] == 0:
@@ -114,7 +109,6 @@ def sqlToDataframe(
 
 	#walk through events
 	prevTimestep = firstTimestep
-	lastTrade = None
 	print("Processing", cEvents, "events in", math.ceil(cEvents / queryLimit), "parts...")
 	for a in range(0, cEvents, queryLimit):
 		cur.execute("SELECT * FROM " + eventsTable + 
@@ -143,7 +137,7 @@ def sqlToDataframe(
 				ts = (prevTimestep - firstTimestep) // timestepSize
 				#compute metrics
 				for cb in metricCallbacks:
-					cb((ts, lastTrade, curOB, maxBid, minAsk, prevTimestep))
+					cb((ts, lastTrade, curOB, maxBid, minAsk, prevTimestep, volume))
 				
 			#keep track of last trade
 			if event[4] == 3:
@@ -165,6 +159,7 @@ def sqlToDataframe(
 					for maxBid in range(maxBid, -1, -1):
 						if curOB[maxBid][0] > 0:
 							break
+			volume += event[3] - curOB[pp][event[1]]
 			curOB[pp][event[1]] = event[3]
 
 	cur.close()
@@ -179,7 +174,15 @@ def sqlToDataframe(
 
 #metric functions
 #takes arguments: metric array, the index of the metric, status
-#status is a tuple: (time, lastTrade, curOB, maxBid, minAsk, time)
+#status is a tuple: (
+# index, 
+# lastTrade, 
+# curOB, 
+# maxBid, 
+# minAsk, 
+# timestamp, 
+# volume
+# )
 def computeMetricTime(npMetrics, id, status):
 	npMetrics[status[0], id] = status[5]
 
@@ -201,5 +204,5 @@ def computeMetricMid(npMetrics, id, status):
 def computeMetricLastTrade(npMetrics, id, status):
 	npMetrics[status[0], id] = status[1]
 
-def computeMetricOIR(npMetrics, id, status):
-	npMetrics[status[0], id] = None #not yet implemented
+def computeMetricVolume(npMetrics, id, status):
+	npMetrics[status[0], id] = status[6]

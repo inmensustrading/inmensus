@@ -17,7 +17,7 @@ def main():
 			"bid-volume",
 			"ask-volume", 
 			"last-trade", 
-			"oir"
+			"volume"
 		],
 		sqlPassword = "3Dd7tAN66wqbjDaD")
 	print(df)
